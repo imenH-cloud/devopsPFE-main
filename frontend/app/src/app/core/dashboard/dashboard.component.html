@@ -1,0 +1,91 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  
+  <!-- Statistiques en haut -->
+  <div class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
+    <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-6">📊 Tableau de bord</h1>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div *ngFor="let stat of stats" class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg p-6 border border-blue-200 dark:border-blue-700">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ stat.label }}</p>
+            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">{{ stat.value }}</p>
+          </div>
+          <div class="text-4xl">{{ stat.icon }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Services Cards -->
+  <div class="p-6">
+    <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Accès aux services</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div *ngFor="let service of services" 
+           [ngClass]="'border-l-4 ' + getCardColorClass(service.color)"
+           class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-lg transition-shadow cursor-pointer">
+        
+        <div class="flex items-start justify-between mb-4">
+          <div class="text-4xl">{{ service.emoji }}</div>
+        </div>
+        
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-2">{{ service.title }}</h3>
+        <p class="text-gray-600 dark:text-gray-400 text-sm mb-4">{{ service.description }}</p>
+        
+        <a [routerLink]="service.route" 
+           [ngClass]="getTextColorClass(service.color)"
+           class="inline-flex items-center font-semibold hover:underline">
+          Accéder 
+          <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- À propos section -->
+  <div class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-6 mt-8">
+    <div class="max-w-4xl">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">📋 À propos de Horizons TSA</h2>
+      
+      <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+        Horizons TSA est une plateforme spécialisée dans le suivi et l'accompagnement des enfants autistes (TSA). 
+        Elle facilite la collaboration entre parents, intervenants spécialisés et éducateurs pour un suivi optimal.
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="border-l-4 border-blue-500 pl-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">🎯 Notre mission</h3>
+          <p class="text-gray-600 dark:text-gray-400">
+            Offrir un accompagnement personnalisé et coordonné pour chaque enfant autiste, en mettant l'accent 
+            sur la collaboration entre tous les acteurs du processus éducatif et thérapeutique.
+          </p>
+        </div>
+
+        <div class="border-l-4 border-green-500 pl-4">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">⭐ Nos valeurs</h3>
+          <p class="text-gray-600 dark:text-gray-400">
+            Inclusion, bienveillance, collaboration et excellence. Nous croyons que chaque enfant mérite 
+            un soutien adapté à ses besoins spécifiques.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          <span class="font-semibold">Centre Défi – Tozeur:</span> Plateforme de suivi TSA - Un projet créé par Hamada Imen
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="bg-gray-100 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-6 text-center">
+    <p class="text-gray-600 dark:text-gray-400 text-sm">
+      © 2026 Horizons TSA – Plateforme de suivi et d'accompagnement TSA
+    </p>
+  </div>
+</div>

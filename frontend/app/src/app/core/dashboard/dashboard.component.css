@@ -1,0 +1,14 @@
+/* Dashboard Component Styles */
+
+.stat-card {
+  @apply bg-gradient-to-br rounded-lg p-6 shadow-md hover:shadow-lg transition-all;
+}
+
+.service-card {
+  @apply bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md hover:shadow-xl transition-all;
+  border-left: 4px solid;
+}
+
+.service-card:hover {
+  @apply transform -translate-y-1;
+}

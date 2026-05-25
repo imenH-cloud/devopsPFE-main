@@ -1,0 +1,190 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-white">Add New Student</h1>
+        <button (click)="goBack()" class="text-white hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <form [formGroup]="studentForm" (ngSubmit)="onSubmit()" class="p-6 space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- First Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            First Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" formControlName="firstName"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['firstName'].errors }">
+          <div *ngIf="submitted && f['firstName'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['firstName'].errors?.['required']">First name is required</span>
+            <span *ngIf="f['firstName'].errors?.['pattern']">Only letters are allowed</span>
+          </div>
+        </div>
+
+        <!-- Last Name -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Last Name <span class="text-red-500">*</span>
+          </label>
+          <input type="text" formControlName="lastName"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['lastName'].errors }">
+          <div *ngIf="submitted && f['lastName'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['lastName'].errors?.['required']">Last name is required</span>
+            <span *ngIf="f['lastName'].errors?.['pattern']">Only letters are allowed</span>
+          </div>
+        </div>
+
+        <!-- Registration Number -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Registration Number <span class="text-red-500">*</span>
+          </label>
+          <input type="text" formControlName="numeroInscriptio"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 placeholder="STU2024001"
+                 [ngClass]="{ 'border-red-500': submitted && f['numeroInscriptio'].errors }">
+          <div *ngIf="submitted && f['numeroInscriptio'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['numeroInscriptio'].errors?.['pattern']">Format: STU2024001</span>
+          </div>
+        </div>
+
+        <!-- Date of Birth -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Date of Birth <span class="text-red-500">*</span>
+          </label>
+          <input type="date" formControlName="dateOfBirth"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['dateOfBirth'].errors }">
+          <div *ngIf="submitted && f['dateOfBirth'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['dateOfBirth'].errors?.['futureDate']">Date cannot be in the future</span>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Email <span class="text-red-500">*</span>
+          </label>
+          <input type="email" formControlName="email"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['email'].errors }">
+          <div *ngIf="submitted && f['email'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['email'].errors?.['required']">Email is required</span>
+            <span *ngIf="f['email'].errors?.['email']">Invalid email format</span>
+          </div>
+        </div>
+
+        <!-- Phone Number -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Phone Number <span class="text-red-500">*</span>
+          </label>
+          <input type="text" formControlName="phoneNumber"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['phoneNumber'].errors }">
+          <div *ngIf="submitted && f['phoneNumber'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['phoneNumber'].errors?.['required']">Phone number is required</span>
+            <span *ngIf="f['phoneNumber'].errors?.['pattern']">Invalid phone format</span>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Address <span class="text-red-500">*</span>
+          </label>
+          <textarea formControlName="address" rows="3"
+                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    [ngClass]="{ 'border-red-500': submitted && f['address'].errors }"></textarea>
+          <div *ngIf="submitted && f['address'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['address'].errors?.['required']">Address is required</span>
+            <span *ngIf="f['address'].errors?.['minlength']">Address must be at least 10 characters</span>
+          </div>
+        </div>
+
+        <!-- Enrollment Date -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Enrollment Date <span class="text-red-500">*</span>
+          </label>
+          <input type="date" formControlName="enrollmentDate"
+                 class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                 [ngClass]="{ 'border-red-500': submitted && f['enrollmentDate'].errors }">
+          <div *ngIf="submitted && f['enrollmentDate'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['enrollmentDate'].errors?.['required']">Enrollment date is required</span>
+          </div>
+        </div>
+
+        <!-- Parent Dropdown -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Select Parent <span class="text-red-500">*</span>
+          </label>
+          <select formControlName="parentId"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  [ngClass]="{ 'border-red-500': submitted && f['parentId'].errors }">
+            <option value="">-- Choose a Parent --</option>
+            <option *ngFor="let parent of parents" [value]="parent.id">
+              {{ parent.firstName }} {{ parent.lastName }}
+            </option>
+          </select>
+          <div *ngIf="!parents || parents.length === 0" class="mt-1 text-sm text-amber-600">
+            ⚠️ No parents available. Create parents first.
+          </div>
+          <div *ngIf="submitted && f['parentId'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['parentId'].errors?.['required']">Parent is required</span>
+          </div>
+        </div>
+
+        <!-- Classroom Dropdown -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Select Classroom <span class="text-red-500">*</span>
+          </label>
+          <select formControlName="classroomId"
+                  class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                  [ngClass]="{ 'border-red-500': submitted && f['classroomId'].errors }">
+            <option value="">-- Choose a Classroom --</option>
+            <option *ngFor="let classroom of classrooms" [value]="classroom.id">
+              {{ classroom.name }} ({{ classroom.grade }})
+            </option>
+          </select>
+          <div *ngIf="!classrooms || classrooms.length === 0" class="mt-1 text-sm text-amber-600">
+            ⚠️ No classrooms available. Create classrooms first.
+          </div>
+          <div *ngIf="submitted && f['classroomId'].errors" class="mt-1 text-sm text-red-600">
+            <span *ngIf="f['classroomId'].errors?.['required']">Classroom is required</span>
+          </div>
+        </div>
+
+        <!-- Submit & Cancel Buttons -->
+        <div class="col-span-2 flex justify-end space-x-4">
+          <button type="button" (click)="goBack()"
+                  class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit" [disabled]="loading"
+                  class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center">
+            <span *ngIf="!loading">Register Student</span>
+            <span *ngIf="loading" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Creating...
+            </span>
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

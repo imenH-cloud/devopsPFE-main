@@ -1,0 +1,135 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <div class="flex min-h-screen">
+    
+    <!-- LEFT SIDE - Blue gradient sidebar with info -->
+    <div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-indigo-700 items-center justify-center p-12">
+      <div class="text-center text-white">
+        <!-- Logo -->
+        <div class="mb-8">
+          <svg class="w-32 h-32 mx-auto text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m-6-8h6"></path>
+          </svg>
+        </div>
+
+        <!-- Title -->
+        <h1 class="text-5xl font-bold mb-4">Horizons TSA</h1>
+
+        <!-- Arabic text -->
+        <h2 class="text-2xl font-semibold mb-4 font-arabic">آفاق اضطراب طيف التوحد</h2>
+
+        <!-- Description -->
+        <p class="text-lg opacity-90 mb-8">Plateforme de suivi et d'accompagnement TSA</p>
+
+        <!-- Role buttons -->
+        <div class="mt-12 grid grid-cols-2 gap-6 mb-12">
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/20 transition cursor-pointer border border-white/20">
+            <div class="text-5xl font-bold mb-3">👨‍👩‍👧</div>
+            <div class="text-base font-semibold">Parents accompagnés</div>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm rounded-lg p-6 hover:bg-white/20 transition cursor-pointer border border-white/20">
+            <div class="text-5xl font-bold mb-3">🧩</div>
+            <div class="text-base font-semibold">Intervenants spécialisés</div>
+          </div>
+        </div>
+
+        <!-- Footer text -->
+        <div class="text-sm opacity-75">🌿 Centre Défi – Tozeur</div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE - Login form -->
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-8 pl-20">
+      <div class="max-w-sm w-full space-y-6">
+        
+        <!-- Header with logo -->
+        <div class="flex justify-center lg:justify-start mb-8">
+          <div class="flex items-center">
+            <span class="text-3xl mr-2">🌟</span>
+            <span class="text-lg font-semibold text-gray-900 dark:text-white">Horizons TSA</span>
+          </div>
+        </div>
+
+        <!-- Welcome message -->
+        <div>
+          <h2 class="text-4xl font-bold text-gray-900 dark:text-white mb-2">Bienvenue</h2>
+          <p class="text-gray-600 dark:text-gray-400">Connectez-vous à votre compte</p>
+        </div>
+
+        <!-- Login form -->
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="mt-8 space-y-6">
+          <!-- Email Field -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Adresse email</label>
+            <input 
+              type="email" 
+              formControlName="email"
+              class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+              [class.border-red-500]="isFieldInvalid('email')"
+              placeholder="nom@education.com"
+            >
+            <p *ngIf="isFieldInvalid('email')" class="mt-1 text-sm text-red-600">
+              {{ getFieldError('email') }}
+            </p>
+          </div>
+
+          <!-- Password Field -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mot de passe</label>
+            <div class="relative">
+              <input 
+                [type]="showPassword ? 'text' : 'password'"
+                formControlName="password"
+                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 block w-full p-3 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                placeholder="••••••••"
+              >
+              <button 
+                type="button" 
+                (click)="togglePasswordVisibility()"
+                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              >
+                {{ showPassword ? '🙈' : '👁️' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Remember & Forgot Password -->
+          <div class="flex items-center justify-between">
+            <label class="flex items-center">
+              <input type="checkbox" formControlName="rememberMe" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+              <span class="ml-2 text-sm text-gray-600 dark:text-gray-400">Se souvenir de moi</span>
+            </label>
+            <a href="#" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">Mot de passe oublié ?</a>
+          </div>
+
+          <!-- Submit Button -->
+          <button 
+            type="submit" 
+            class="w-full text-white bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 focus:ring-4 focus:ring-blue-300 font-semibold rounded-lg text-base px-5 py-3 text-center dark:focus:ring-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl"
+            [disabled]="loginForm.invalid || isLoading"
+          >
+            <span *ngIf="!isLoading">Se connecter</span>
+            <span *ngIf="isLoading" class="flex items-center justify-center">
+              <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Connexion...
+            </span>
+          </button>
+
+          <!-- Error Message -->
+          <div *ngIf="error" class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+            {{ error }}
+          </div>
+        </form>
+
+        <!-- Footer -->
+        <div class="text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-6">
+          <p class="font-semibold">© 2026 Horizons TSA – Plateforme de suivi TSA</p>
+          <p class="text-xs mt-1">Un projet créé par Hamada Imen</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,10 @@
+﻿import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.enableCors();
+  await app.listen(3007, '0.0.0.0');
+  console.log('Teacher service running on port 3007');
+}
+bootstrap();

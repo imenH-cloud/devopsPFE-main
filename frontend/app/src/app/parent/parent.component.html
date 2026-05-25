@@ -1,0 +1,165 @@
+<div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="max-w-6xl mx-auto">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-4xl font-bold text-gray-900 dark:text-white">👨‍👩‍👧 Parents accompagnés</h1>
+      <button 
+        (click)="toggleForm()"
+        [ngClass]="showForm ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
+        class="text-white font-semibold py-2 px-6 rounded-lg transition-all">
+        {{ showForm ? 'Annuler' : '+ Ajouter Parent' }}
+      </button>
+    </div>
+
+    <!-- Messages -->
+    <div *ngIf="success" class="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+      {{ success }}
+    </div>
+    <div *ngIf="error" class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+      {{ error }}
+    </div>
+
+    <!-- Add Form -->
+    <div *ngIf="showForm" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 mb-8">
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Ajouter un nouveau parent</h2>
+      
+      <form [formGroup]="parentForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Prénom -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prénom</label>
+          <input 
+            type="text" 
+            formControlName="firstName"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Ahmed">
+        </div>
+
+        <!-- Nom -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nom</label>
+          <input 
+            type="text" 
+            formControlName="lastName"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Ben Ali">
+        </div>
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
+          <input 
+            type="email" 
+            formControlName="email"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="ahmed@email.com">
+        </div>
+
+        <!-- Téléphone -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Téléphone</label>
+          <input 
+            type="tel" 
+            formControlName="phoneNumber"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="+216 20 000 000">
+        </div>
+
+        <!-- CIN -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CIN</label>
+          <input 
+            type="number" 
+            formControlName="NCIN"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="12345678">
+        </div>
+
+        <!-- Adresse -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Adresse</label>
+          <input 
+            type="text" 
+            formControlName="address"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Rue, Ville">
+        </div>
+
+        <!-- Type d'assurance -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Type d'assurance</label>
+          <input 
+            type="text" 
+            formControlName="typeInsurance"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="CNAM, Privée, etc.">
+        </div>
+
+        <!-- Numéro d'assurance -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Numéro d'assurance</label>
+          <input 
+            type="text" 
+            formControlName="Numeroinsurance"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="12345678">
+        </div>
+
+        <!-- Métier -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Métier</label>
+          <input 
+            type="text" 
+            formControlName="job"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            placeholder="Ingénieur, Professeur, etc.">
+        </div>
+
+        <!-- Submit Button -->
+        <div class="md:col-span-2">
+          <button 
+            type="submit"
+            [disabled]="parentForm.invalid || isLoading"
+            class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition-all">
+            {{ isLoading ? 'Création en cours...' : 'Créer le parent' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Parents List -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+      <table class="w-full">
+        <thead class="bg-gray-200 dark:bg-gray-700">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Nom</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Email</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Téléphone</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Métier</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-white">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+          <tr *ngFor="let parent of parents" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+            <td class="px-6 py-4 text-gray-900 dark:text-white">{{ parent.firstName }} {{ parent.lastName }}</td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ parent.email }}</td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ parent.phoneNumber }}</td>
+            <td class="px-6 py-4 text-gray-600 dark:text-gray-400">{{ parent.job }}</td>
+            <td class="px-6 py-4">
+              <button 
+                (click)="deleteParent(parent.id!)"
+                class="text-red-600 hover:text-red-800 font-semibold">
+                Supprimer
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="parents.length === 0">
+            <td colspan="5" class="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+              Aucun parent trouvé. Cliquez sur "+ Ajouter Parent" pour en créer un.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
