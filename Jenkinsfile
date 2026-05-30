@@ -1,95 +1,66 @@
-# =====================================================
-# JENKINSFILE - Pipeline CI/CD pour DevOps PFE
-# =====================================================
-# Ce fichier définit l'ensemble du pipeline d'intégration continue et déploiement continu
+// Pipeline CI/CD Jenkins pour DevOps PFE - Explication détaillée ligne par ligne
+// ============================================================================
 
-# Déclaration du pipeline déclaratif Jenkins
-pipeline {
-    # Agent : "any" signifie que le pipeline peut s'exécuter sur n'importe quel agent disponible
-    # Si vous aviez plusieurs agents, vous pourriez spécifier un label spécifique
-    agent any
+// DÉCLARATION DU PIPELINE
+pipeline {                                              // Déclare un pipeline déclaratif Jenkins
+    agent any                                           // Exécute sur n'importe quel agent disponible
     
-    # ===== OPTIONS GLOBALES =====
-    options {
-        # buildDiscarder : nettoie automatiquement les anciennes builds
-        # Garde seulement les 10 derniers builds pour économiser l'espace disque
-        buildDiscarder(logRotator(numToKeepStr: '10'))
-        
-        # timestamps : ajoute des timestamps à chaque ligne de log
-        # Permet de voir quand chaque étape a débuté
-        timestamps()
-        
-        # timeout : définit un timeout global pour tout le pipeline
-        # Si le build prend plus de 1 heure, il est automatiquement annulé
-        timeout(time: 1, unit: 'HOURS')
+    // OPTIONS GLOBALES DU PIPELINE
+    options {                                           // Bloc pour configurer le comportement global
+        buildDiscarder(logRotator(numToKeepStr: '10')) // Garde seulement les 10 derniers builds (nettoie l'historique)
+        timestamps()                                    // Ajoute des timestamps à chaque ligne de log (voir QUAND chaque étape démarre)
+        timeout(time: 1, unit: 'HOURS')                // Annule automatiquement le build s'il dépasse 1 heure
     }
     
-    # ===== PARAMÈTRES =====
-    # Ces paramètres permettent à l'utilisateur de personnaliser chaque build Jenkins
-    parameters {
-        # Choix de l'environnement de déploiement
-        choice(name: 'DEPLOY_ENV', choices: ['development', 'staging', 'production'], description: 'Deployment environment')
-        
-        # Booléen : faut-il pousser les images vers Docker Hub?
-        booleanParam(name: 'PUSH_DOCKER', defaultValue: true, description: 'Push images to Docker Hub?')
-        
-        # Booléen : faut-il exécuter les scans de sécurité Trivy?
-        booleanParam(name: 'RUN_TRIVY', defaultValue: true, description: 'Run Trivy security scans?')
+    // PARAMÈTRES UTILISATEUR
+    // Ces paramètres apparaîtront dans l'interface Jenkins et l'utilisateur peut les modifier
+    parameters {                                        // Bloc pour définir les paramètres du build
+        choice(name: 'DEPLOY_ENV', choices: ['development', 'staging', 'production'], description: 'Deployment environment') // Choix : dev/staging/prod
+        booleanParam(name: 'PUSH_DOCKER', defaultValue: true, description: 'Push images to Docker Hub?') // Cocher pour pousser les images
+        booleanParam(name: 'RUN_TRIVY', defaultValue: true, description: 'Run Trivy security scans?')    // Cocher pour faire les scans de sécurité
     }
     
-    # ===== VARIABLES D'ENVIRONNEMENT GLOBALES =====
-    # Ces variables sont disponibles dans tout le pipeline
-    environment {
-        # Registre Docker (Docker Hub)
-        DOCKER_REGISTRY = 'eline2016'
-        
-        # URL du repository source (code applicatif)
-        GIT_REPO = 'https://github.com/imenH-cloud/devopsPFE-main.git'
-        
-        # URL du repository GitOps (manifests Kubernetes)
-        GITOPS_REPO = 'https://github.com/imenH-cloud/devopsPFE-gitops.git'
-        
-        # Adresse du serveur Argo CD (pour le déploiement GitOps)
-        ARGOCD_SERVER = 'localhost:32000'
+    // VARIABLES D'ENVIRONNEMENT GLOBALES
+    // Ces variables sont accessibles partout dans le pipeline via ${NOM_VARIABLE}
+    environment {                                       // Bloc pour définir les variables globales
+        DOCKER_REGISTRY = 'eline2016'                  // Nom du registre Docker Hub (utilisateur Docker Hub)
+        GIT_REPO = 'https://github.com/imenH-cloud/devopsPFE-main.git'        // URL du repo GitHub source
+        GITOPS_REPO = 'https://github.com/imenH-cloud/devopsPFE-gitops.git'   // URL du repo GitHub GitOps
+        ARGOCD_SERVER = 'localhost:32000'              // Adresse du serveur Argo CD (déploiement automatique)
     }
     
-    # ===== ÉTAPES DU PIPELINE =====
-    stages {
-        # ----- ÉTAPE 1 : RÉCUPÉRATION DU CODE SOURCE -----
-        stage('Checkout') {
-            steps {
-                # Echo pour afficher un message dans les logs
-                echo "🔄 Checking out source code..."
-                
-                # checkout scm : récupère le code depuis le repository Git
-                # scm = Source Control Management (récupère depuis le repo configuré)
-                checkout scm
+    // ÉTAPES DU PIPELINE
+    stages {                                            // Bloc contenant toutes les étapes du pipeline
+        
+        // ÉTAPE 1 : RÉCUPÉRATION DU CODE SOURCE
+        stage('Checkout') {                             // Nom de l'étape visible dans Jenkins
+            steps {                                     // Bloc d'actions à exécuter
+                echo "🔄 Checking out source code..."   // Affiche un message dans les logs
+                checkout scm                            // Récupère le code depuis le repository Git configuré
             }
         }
         
-        # ----- ÉTAPE 2 : BUILD DES MICROSERVICES BACKEND -----
-        # parallel : les stages enfants s'exécutent en parallèle pour gagner du temps
-        stage('Build Backend Services') {
-            parallel {
-                # Les 8 services s'exécutent en parallèle (au lieu de séquentiellement)
+        // ÉTAPE 2 : BUILD DES MICROSERVICES BACKEND (EN PARALLÈLE)
+        stage('Build Backend Services') {               // Étape pour construire tous les microservices
+            parallel {                                  // Les stages enfants s'exécutent en PARALLÈLE (plus rapide)
+                // Les 8 services se compilent simultanément au lieu d'un par un
                 
-                stage('Build Activity Service') {
-                    steps {
-                        script {
-                            echo "🔨 Building activity-service:${BUILD_NUMBER}..."
-                            # dir() : exécute les commandes dans le répertoire spécifié
-                            # Navigue dans backend/activity
-                            dir('backend/activity') {
-                                # docker build : construit l'image Docker
-                                # -t : tag (nom et version de l'image)
-                                # BUILD_NUMBER : numéro unique de la build Jenkins
-                                bat "docker build -t ${DOCKER_REGISTRY}/devopspfe-activity-service:${BUILD_NUMBER} ."
+                stage('Build Activity Service') {       // Service de gestion des activités
+                    steps {                             // Bloc d'actions
+                        script {                        // Permet d'utiliser de la logique Groovy
+                            echo "🔨 Building activity-service:${BUILD_NUMBER}..."  // Affiche le numéro de build
+                            dir('backend/activity') {   // Change de répertoire vers backend/activity
+                                bat "docker build -t ${DOCKER_REGISTRY}/devopspfe-activity-service:${BUILD_NUMBER} ."  // Compile l'image Docker
+                                // -t = tag (nom:version de l'image)
+                                // ${DOCKER_REGISTRY} = eline2016
+                                // ${BUILD_NUMBER} = numéro unique du build (ex: #42)
+                                // . = utilise le Dockerfile du répertoire courant
                             }
                         }
                     }
                 }
                 
-                stage('Build Auth Service') {
+                stage('Build Auth Service') {           // Service d'authentification
                     steps {
                         script {
                             echo "🔨 Building auth-service:${BUILD_NUMBER}..."
@@ -100,7 +71,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build Classroom Service') {
+                stage('Build Classroom Service') {      // Service de gestion des salles de classe
                     steps {
                         script {
                             echo "🔨 Building classroom-service:${BUILD_NUMBER}..."
@@ -111,7 +82,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build Gateway Service') {
+                stage('Build Gateway Service') {        // API Gateway (point d'entrée unique)
                     steps {
                         script {
                             echo "🔨 Building gateway-service:${BUILD_NUMBER}..."
@@ -122,7 +93,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build Parent Service') {
+                stage('Build Parent Service') {         // Service de gestion des parents
                     steps {
                         script {
                             echo "🔨 Building parent-service:${BUILD_NUMBER}..."
@@ -133,7 +104,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build Student Service') {
+                stage('Build Student Service') {        // Service de gestion des étudiants
                     steps {
                         script {
                             echo "🔨 Building student-service:${BUILD_NUMBER}..."
@@ -144,7 +115,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build Teacher Service') {
+                stage('Build Teacher Service') {        // Service de gestion des enseignants
                     steps {
                         script {
                             echo "🔨 Building teacher-service:${BUILD_NUMBER}..."
@@ -155,7 +126,7 @@ pipeline {
                     }
                 }
                 
-                stage('Build User Service') {
+                stage('Build User Service') {           // Service de gestion des utilisateurs
                     steps {
                         script {
                             echo "🔨 Building user-service:${BUILD_NUMBER}..."
@@ -168,151 +139,140 @@ pipeline {
             }
         }
         
-        # ----- ÉTAPE 3 : BUILD DU FRONTEND -----
-        stage('Build Frontend') {
+        // ÉTAPE 3 : BUILD DU FRONTEND (APPLICATION ANGULAR)
+        stage('Build Frontend') {                       // Étape pour construire l'application Angular
             steps {
                 script {
-                    echo "🔨 Building frontend-app:${BUILD_NUMBER}..."
-                    dir('frontend') {
-                        # -f Dockerfile.prod : utilise le Dockerfile de production
-                        # . : utilise le répertoire courant comme contexte
+                    echo "🔨 Building frontend-app:${BUILD_NUMBER}..."  // Message de démarrage
+                    dir('frontend') {                   // Change de répertoire vers frontend/
                         bat "docker build -f Dockerfile.prod -t ${DOCKER_REGISTRY}/devopspfe-frontend-app:${BUILD_NUMBER} ."
+                        // -f Dockerfile.prod = utilise le Dockerfile de production (multi-stage)
+                        // Produit une image optimisée avec Nginx
                     }
                 }
             }
         }
         
-        # ----- ÉTAPE 4 : SCANS DE SÉCURITÉ AVEC TRIVY -----
-        # when { expression } : cette étape ne s'exécute que si la condition est vraie
-        stage('Trivy Security Scan') {
-            when {
-                # RUN_TRIVY est true si l'utilisateur a coché le paramètre
-                expression { params.RUN_TRIVY == true }
+        // ÉTAPE 4 : SCANS DE SÉCURITÉ AVEC TRIVY
+        stage('Trivy Security Scan') {                  // Étape pour scanner les vulnérabilités des images
+            when {                                      // Condition : exécute seulement SI la condition est vraie
+                expression { params.RUN_TRIVY == true } // Vérifie si l'utilisateur a activé les scans Trivy
             }
             steps {
                 script {
-                    echo "🔍 Running Trivy security scans..."
-                    # Trivy : scanner de vulnérabilités pour images Docker
-                    # --exit-code 0 : ne pas échouer même si des vulnérabilités sont trouvées
-                    # --severity CRITICAL : scanner seulement les vulnérabilités critiques
+                    echo "🔍 Running Trivy security scans..."  // Message de démarrage
                     bat '''
-                        setlocal enabledelayedexpansion
-                        # Boucle sur tous les microservices
+                        setlocal enabledelayedexpansion      // Active les variables dynamiques en batch
                         for %%i in (activity-service auth-service classroom-service gateway-service parent-service student-service teacher-service user-service) do (
-                            echo Scanning eline2016/devopspfe-%%i:%BUILD_NUMBER%...
+                            echo Scanning eline2016/devopspfe-%%i:%BUILD_NUMBER%...  // Affiche le nom du service scanné
                             docker run --rm aquasec/trivy:latest image --exit-code 0 --severity CRITICAL eline2016/devopspfe-%%i:%BUILD_NUMBER% || exit /b 0
+                            // docker run = lance un conteneur Trivy
+                            // --rm = supprime le conteneur après l'exécution (nettoyage)
+                            // aquasec/trivy:latest = image Trivy (scanner de vulnérabilités)
+                            // image = scanne une image Docker
+                            // --exit-code 0 = ne pas échouer même si des vulnérabilités sont trouvées
+                            // --severity CRITICAL = scanner seulement les vulnérabilités critiques
                         )
-                        # Scan du frontend
-                        echo Scanning eline2016/devopspfe-frontend-app:%BUILD_NUMBER%...
+                        echo Scanning eline2016/devopspfe-frontend-app:%BUILD_NUMBER%...  // Scanne aussi le frontend
                         docker run --rm aquasec/trivy:latest image --exit-code 0 --severity CRITICAL eline2016/devopspfe-frontend-app:%BUILD_NUMBER% || exit /b 0
-                        echo ✅ Trivy scans completed
+                        echo ✅ Trivy scans completed  // Message de fin
                     '''
                 }
             }
         }
         
-        # ----- ÉTAPE 5 : PUSH VERS DOCKER HUB -----
-        stage('Push to Docker Hub') {
-            when {
-                # Cette étape s'exécute seulement si PUSH_DOCKER = true
-                expression { params.PUSH_DOCKER == true }
+        // ÉTAPE 5 : PUSH DES IMAGES VERS DOCKER HUB
+        stage('Push to Docker Hub') {                   // Étape pour envoyer les images compilées vers le registre
+            when {                                      // Condition
+                expression { params.PUSH_DOCKER == true }  // Exécute seulement SI PUSH_DOCKER = true
             }
             steps {
                 script {
-                    echo "📤 Pushing images to Docker Hub..."
-                    # withCredentials : charge les identifiants stockés dans Jenkins
-                    # credentialsId: 'docker-hub-credentials' : identifiants Docker Hub
+                    echo "📤 Pushing images to Docker Hub..."  // Message de démarrage
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        // withCredentials = charge les identifiants stockés dans Jenkins
+                        // credentialsId = identifiant des credentials dans Jenkins
+                        // DOCKER_USER = variable contenant le username Docker
+                        // DOCKER_PASS = variable contenant le password Docker (sécurisé)
                         bat '''
-                            # Docker login : authentification auprès de Docker Hub
-                            docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                            docker login -u %DOCKER_USER% -p %DOCKER_PASS%  // Authentifie auprès de Docker Hub
                             
-                            # Boucle : push chaque image microservice
                             for %%s in (activity auth classroom gateway parent student teacher user) do (
-                                echo Pushing eline2016/devopspfe-%%s-service:%BUILD_NUMBER%...
-                                docker push eline2016/devopspfe-%%s-service:%BUILD_NUMBER%
+                                echo Pushing eline2016/devopspfe-%%s-service:%BUILD_NUMBER%...  // Affiche le nom du service
+                                docker push eline2016/devopspfe-%%s-service:%BUILD_NUMBER%      // Envoie l'image vers Docker Hub
                             )
                             
-                            # Push du frontend
-                            echo Pushing eline2016/devopspfe-frontend-app:%BUILD_NUMBER%...
-                            docker push eline2016/devopspfe-frontend-app:%BUILD_NUMBER%
+                            echo Pushing eline2016/devopspfe-frontend-app:%BUILD_NUMBER%...    // Affiche le nom du frontend
+                            docker push eline2016/devopspfe-frontend-app:%BUILD_NUMBER%        // Envoie l'image frontend
                             
-                            # Docker logout : se déconnecter de Docker Hub
-                            docker logout
-                            echo ✅ All images pushed to Docker Hub
+                            docker logout                           // Se déconnecte de Docker Hub (sécurité)
+                            echo ✅ All images pushed to Docker Hub  // Message de fin
                         '''
                     }
                 }
             }
         }
         
-        # ----- ÉTAPE 6 : MISE À JOUR DU REPO GITOPS -----
-        # Cette étape met à jour les manifests Kubernetes avec les nouvelles versions d'images
-        stage('Update GitOps Repo') {
-            when {
-                expression { params.PUSH_DOCKER == true }
+        // ÉTAPE 6 : MISE À JOUR DU REPO GITOPS
+        stage('Update GitOps Repo') {                   // Étape pour mettre à jour les manifests Kubernetes
+            when {                                      // Condition
+                expression { params.PUSH_DOCKER == true }  // Exécute seulement SI PUSH_DOCKER = true
             }
             steps {
                 script {
-                    echo "🔄 Updating GitOps Repo (devopsPFE-gitops)..."
-                    # withCredentials : charge le token GitHub
+                    echo "🔄 Updating GitOps Repo (devopsPFE-gitops)..."  // Message de démarrage
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
+                        // Charge le token GitHub pour l'authentification
                         bat '''
-                            setlocal enabledelayedexpansion
-                            # Nettoie les fichiers temporaires si présents
-                            if exist gitops-temp rmdir /s /q gitops-temp
+                            setlocal enabledelayedexpansion      // Active les variables dynamiques en batch
+                            if exist gitops-temp rmdir /s /q gitops-temp  // Nettoie les anciens fichiers temporaires
                             
-                            # Construit l'URL de clone avec le token (authentification)
                             set "GITOPS_URL=https://%GITHUB_TOKEN%@github.com/imenH-cloud/devopsPFE-gitops.git"
+                            // Construit l'URL de clone avec le token (authentification automatique)
                             
-                            # Clone le repo GitOps
-                            git clone !GITOPS_URL! gitops-temp
-                            cd gitops-temp
+                            git clone !GITOPS_URL! gitops-temp    // Clone le repo GitOps
+                            cd gitops-temp                         // Entre dans le dossier cloné
                             
-                            echo Updating kubernetes manifests in GitOps repo...
+                            echo Updating kubernetes manifests in GitOps repo...  // Message
                             
-                            # Met à jour chaque fichier manifest avec la nouvelle version d'image
                             for %%s in (activity auth classroom gateway parent student teacher user) do (
                                 if exist kubernetes\backend\%%s-service.yaml (
-                                    # powershell -Command : exécute une commande PowerShell
-                                    # -replace : remplace l'ancienne version d'image par la nouvelle
-                                    # %BUILD_NUMBER% : version de la build
+                                    // Vérifie si le fichier manifest existe
                                     powershell -Command "$content = Get-Content 'kubernetes\backend\%%s-service.yaml' -Raw; $content = $content -replace 'image: devopspfe-%%s-service:[^\s]*', 'image: eline2016/devopspfe-%%s-service:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\backend\%%s-service.yaml'"
+                                    // Remplace l'ancienne version d'image par la nouvelle dans le manifest
                                 )
                             )
                             
-                            # Met à jour spécifiquement la gateway
                             if exist kubernetes\backend\gateway-backend.yaml (
                                 powershell -Command "$content = Get-Content 'kubernetes\backend\gateway-backend.yaml' -Raw; $content = $content -replace 'image: devopspfe-gateway-backend:[^\s]*', 'image: eline2016/devopspfe-gateway-backend:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\backend\gateway-backend.yaml'"
                             )
+                            // Met à jour spécifiquement la gateway
                             
-                            # Met à jour le frontend si présent
                             if exist kubernetes\frontend\frontend-app.yaml (
                                 powershell -Command "$content = Get-Content 'kubernetes\frontend\frontend-app.yaml' -Raw; $content = $content -replace 'image: devopspfe-frontend-app:[^\s]*', 'image: eline2016/devopspfe-frontend-app:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\frontend\frontend-app.yaml'"
                             )
+                            // Met à jour le frontend si le fichier existe
                             
-                            # Affiche les fichiers modifiés
                             echo .
-                            echo Updated manifests:
-                            git diff --name-only
+                            echo Updated manifests:            // Message
+                            git diff --name-only              // Affiche les fichiers modifiés
                             
-                            # Commit et push des modifications
-                            git config user.email "jenkins@devops.local"
-                            git config user.name "Jenkins CI/CD"
-                            git add kubernetes/
-                            # git commit : crée un commit avec le numéro de build
-                            git commit -m "Jenkins Build #%BUILD_NUMBER% - Updated Docker images" || (
+                            git config user.email "jenkins@devops.local"  // Configure l'email du commit
+                            git config user.name "Jenkins CI/CD"          // Configure le nom du commit
+                            git add kubernetes/                // Stage les modifications
+                            git commit -m "Jenkins Build #%BUILD_NUMBER% - Updated Docker images" || (  // Crée un commit
                                 echo ✅ No changes to commit
                                 exit /b 0
                             )
-                            # git push : pousse les modifications vers GitHub
-                            git push origin main
+                            // Msg du commit = "Jenkins Build #42 - Updated Docker images"
                             
-                            # Nettoie les fichiers temporaires
-                            cd ..
-                            rmdir /s /q gitops-temp
-                            echo ✅ GitOps repo updated successfully
-                            echo ✅ Argo CD will sync automatically
+                            git push origin main               // Pousse les modifications vers GitHub
+                            // Argo CD détectera automatiquement ces changements et les appliquera au cluster K8s
+                            
+                            cd ..                              // Revient au répertoire parent
+                            rmdir /s /q gitops-temp            // Supprime les fichiers temporaires
+                            echo ✅ GitOps repo updated successfully      // Message de fin
+                            echo ✅ Argo CD will sync automatically       // Message de fin
                         '''
                     }
                 }
@@ -320,31 +280,25 @@ pipeline {
         }
     }
     
-    # ===== ÉTAPE POST-BUILD =====
-    # post : s'exécute après l'exécution de toutes les étapes
-    post {
-        # always : s'exécute toujours, peu importe le résultat
-        always {
+    // ÉTAPE POST-BUILD (s'exécute APRÈS toutes les étapes)
+    post {                                              // Bloc de nettoyage post-build
+        always {                                        // S'exécute TOUJOURS (succès ou échec)
             script {
-                echo "🧹 Cleaning up..."
-                # docker image prune -f : supprime les images Docker non utilisées
-                # Libère de l'espace disque après le build
-                bat 'docker image prune -f || exit /b 0'
+                echo "🧹 Cleaning up..."                // Message de nettoyage
+                bat 'docker image prune -f || exit /b 0'  // Supprime les images Docker inutilisées pour économiser l'espace
             }
         }
         
-        # success : s'exécute seulement si le build a réussi
-        success {
-            echo "✅ BUILD SUCCESSFUL - Build #${BUILD_NUMBER}"
-            echo "📤 Images pushed to Docker Hub: eline2016/devopspfe-*:${BUILD_NUMBER}"
-            echo "🔄 GitOps repo updated: devopsPFE-gitops/kubernetes/"
-            echo "🚀 Argo CD will auto-sync from GitOps repo"
-            echo "🎯 Environment: ${DEPLOY_ENV}"
+        success {                                       // S'exécute SEULEMENT si le build a réussi
+            echo "✅ BUILD SUCCESSFUL - Build #${BUILD_NUMBER}"              // Message de succès
+            echo "📤 Images pushed to Docker Hub: eline2016/devopspfe-*:${BUILD_NUMBER}"   // Résumé
+            echo "🔄 GitOps repo updated: devopsPFE-gitops/kubernetes/"     // Résumé
+            echo "🚀 Argo CD will auto-sync from GitOps repo"                // Résumé
+            echo "🎯 Environment: ${DEPLOY_ENV}"                             // Affiche l'environnement
         }
         
-        # failure : s'exécute seulement si le build a échoué
-        failure {
-            echo "❌ BUILD FAILED - Build #${BUILD_NUMBER}"
+        failure {                                       // S'exécute SEULEMENT si le build a échoué
+            echo "❌ BUILD FAILED - Build #${BUILD_NUMBER}"                  // Message d'erreur
         }
     }
 }
