@@ -1,80 +1,181 @@
+# =============================================
+# Docker Compose - Orchestration multi-conteneurs
+# =============================================
+# Version 3.8 : version compatible avec Docker Engine 19.03+
 version: '3.8'
 
+# Section des services (conteneurs)
 services:
-  # PostgreSQL Database
+
+  # ===== POSTGRESQL DATABASE =====
+  # Service de base de données relationnelle
   postgres:
+    # Utilise l'image PostgreSQL 15 sur Alpine Linux (léger)
     image: postgres:15-alpine
+
+    # Nom du conteneur visible dans "docker ps"
     container_name: education-postgres
+
+    # Variables d'environnement pour PostgreSQL
     environment:
+      # Utilisateur PostgreSQL par défaut
       POSTGRES_USER: education
+
+      # Mot de passe pour l'utilisateur
       POSTGRES_PASSWORD: education
+
+      # Nom de la base de données créée automatiquement
       POSTGRES_DB: education_db
+
+    # Volumes : stockage persistant des données
+    # postgres_data (nommé) : stocke les données PostgreSQL sur l'hôte
+    # Permet que les données persistent même après l'arrêt du conteneur
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+    # Ports exposés : HOST:CONTENEUR
+    # Accès PostgreSQL depuis l'hôte sur le port 5432
     ports:
       - "5432:5432"
+
+    # Réseau Docker : les conteneurs du même réseau peuvent se communiquer
     networks:
       - education
 
-  # Redis Cache
+  # ===== REDIS CACHE =====
+  # Service de cache en mémoire (sessions, cache, etc.)
   redis:
+    # Utilise l'image Redis 7 sur Alpine Linux
     image: redis:7-alpine
+
+    # Nom du conteneur
     container_name: education-redis
+
+    # Ports : Redis écoutera sur le port 6379
     ports:
       - "6379:6379"
+
+    # Réseau : connecté au réseau education
     networks:
       - education
 
-  # RabbitMQ Message Queue
+  # ===== RABBITMQ MESSAGE QUEUE =====
+  # Service de message broker (communication asynchrone entre services)
   rabbitmq:
+    # Utilise l'image RabbitMQ 3 avec management UI sur Alpine
+    # Le management UI permet une gestion visuelle sur http://localhost:15672
     image: rabbitmq:3-management-alpine
+
+    # Nom du conteneur
     container_name: education-rabbitmq
+
+    # Variables d'environnement RabbitMQ
     environment:
+      # Utilisateur par défaut pour RabbitMQ
       RABBITMQ_DEFAULT_USER: admin
+
+      # Mot de passe par défaut
       RABBITMQ_DEFAULT_PASS: admin
+
+    # Ports exposés :
+    # 5672 : port AMQP (communication des microservices avec RabbitMQ)
+    # 15672 : port de l'interface de gestion (Management UI)
     ports:
       - "5672:5672"
       - "15672:15672"
+
+    # Réseau : connecté au réseau education
     networks:
       - education
 
-  # API Gateway
+  # ===== API GATEWAY =====
+  # Service d'entrée pour les requêtes API (point d'entrée unique)
   gateway:
+    # Construction du conteneur depuis le Dockerfile du gateway
     build:
+      # Chemin du contexte (dossier où se trouvent les sources)
       context: ./backend/gateway
+
+      # Nom du Dockerfile à utiliser
       dockerfile: Dockerfile
+
+    # Nom du conteneur
     container_name: education-gateway
+
+    # Variables d'environnement pour le microservice Gateway
     environment:
+      # Mode développement (plus de logs, pas d'optimisations)
       NODE_ENV: development
+
+      # Port d'écoute du service
       PORT: 3000
+
+      # Configuration de la base de données
+      # DB_HOST: nom du service (Docker résout automatiquement vers l'IP du conteneur postgres)
       DB_HOST: postgres
+
+      # Port PostgreSQL
       DB_PORT: 5432
+
+      # Identifiants PostgreSQL
       DB_USERNAME: education
       DB_PASSWORD: education
+
+      # Nom de la base de données
       DB_NAME: education_db
+
+    # Ports : le service écoute sur le port 3000 du conteneur
     ports:
       - "3000:3000"
+
+    # Dépendances : le gateway ne démarre que APRÈS postgres
+    # Ne garantit pas que postgres est prêt, juste que le conteneur a démarré
     depends_on:
       - postgres
+
+    # Réseau : connecté au réseau education
     networks:
       - education
 
-  # Frontend
+  # ===== FRONTEND =====
+  # Application Angular servie par Nginx
   frontend:
+    # Construction du conteneur depuis le Dockerfile du frontend
     build:
+      # Chemin du contexte (racine du dossier frontend)
       context: ./frontend
+
+      # Utilise le Dockerfile de production
       dockerfile: Dockerfile.prod
+
+    # Nom du conteneur
     container_name: education-frontend
+
+    # Ports : Nginx écoutera sur le port 80 (HTTP)
     ports:
       - "80:80"
+
+    # Dépendances : le frontend ne démarre que APRÈS la gateway
+    # Le frontend a besoin de l'API pour fonctionner
     depends_on:
       - gateway
+
+    # Réseau : connecté au réseau education
     networks:
       - education
 
+# ===== VOLUMES =====
+# Définit les volumes persistants utilisés par les services
 volumes:
+  # Volume nommé postgres_data : stocke les données PostgreSQL sur l'hôte
+  # Emplacement réel : /var/lib/docker/volumes/postgres_data/_data
   postgres_data:
 
+# ===== NETWORKS =====
+# Définit les réseaux Docker utilisés par les services
 networks:
+  # Réseau nommé "education" avec le driver bridge
+  # Bridge : les conteneurs peuvent se communiquer entre eux par le nom du service
+  # Chaque service sur ce réseau obtient une adresse IP dans le subnet du réseau
   education:
     driver: bridge

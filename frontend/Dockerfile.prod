@@ -1,13 +1,43 @@
+# =============================================
+# Stage 1 : Build minimaliste Angular
+# =============================================
+# Utilise l'image Node.js 20 sur Alpine Linux pour la compilation
 FROM node:20-alpine AS builder
+
+# Définit le répertoire de travail à /app
 WORKDIR /app
+
+# Copie les fichiers package*.json (package.json et optionnellement package-lock.json)
 COPY app/package*.json ./
+
+# Installe les dépendances avec --force pour ignorer les avertissements de dépendances incompatibles
+# Utile quand --legacy-peer-deps ne suffit pas (plus agressif)
 RUN npm install --force
+
+# Copie tout le code source de l'application Angular
 COPY app/ .
+
+# Exécute le build Angular (produit les fichiers dans dist/front/browser)
 RUN npm run build
 
+# =============================================
+# Stage 2 : Nginx avec nettoyage amélioré
+# =============================================
+# Utilise l'image Nginx Alpine
 FROM nginx:alpine
+
+# Supprime à la fois les fichiers HTML par défaut et la configuration par défaut
+# Cela garantit une image plus propre et sans résidus
 RUN rm -f /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
+
+# Copie les fichiers statiques compilés du stage 1 vers le répertoire Nginx
 COPY --from=builder /app/dist/front/browser /usr/share/nginx/html
+
+# Copie la configuration Nginx personnalisée
 COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose le port 80 pour les requêtes HTTP
 EXPOSE 80
+
+# Lance Nginx en avant-plan (daemon off permet au conteneur de rester actif)
 CMD ["nginx", "-g", "daemon off;"]
