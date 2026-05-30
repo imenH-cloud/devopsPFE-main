@@ -1,145 +1,189 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend-deployment
-  
-  labels:
+// =====================================================
+// FRONTEND/FRONTEND-APP.YAML - Angular Frontend Deployment
+// =====================================================
+// Déploie l'application Angular compilée servie par Nginx
+
+// ===== 1. DEPLOYMENT - Déploiement Frontend =====
+apiVersion: apps/v1                         // Version API
+kind: Deployment                            // Type : Deployment
+metadata:                                   // Métadonnées
+  name: frontend-deployment                 // Nom du déploiement
+  labels:                                   // Labels pour identification
     app: frontend
-    tier: frontend
-spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
+    tier: frontend                          // Tier : frontend
+    
+spec:                                       // Spécification
+  replicas: 2                               // 2 instances (Haute Disponibilité)
+  
+  strategy:                                 // Stratégie de mise à jour
+    type: RollingUpdate                     // Mise à jour progressive
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  selector:
-    matchLabels:
+      maxUnavailable: 0                     // 0 pod down (pas d'interruption de service)
+      maxSurge: 1                           // 1 pod supplémentaire pendant la mise à jour
+      
+  selector:                                 // Sélecteur de pods
+    matchLabels:                            // Par labels
       app: frontend
-  template:
-    metadata:
-      labels:
+      
+  template:                                 // Template de pod
+    metadata:                               // Métadonnées du pod
+      labels:                               // Labels du pod
         app: frontend
         tier: frontend
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "4200"
-        prometheus.io/path: "/metrics"
-    spec:
-      serviceAccountName: default
-      securityContext:
-        runAsNonRoot: true
-        runAsUser: 101
-        fsGroup: 101
-      containers:
-        - name: frontend
-          image: devopspfe-frontend-app:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 4200
-              name: http
-          resources:
-            requests:
-              memory: "128Mi"
-              cpu: "100m"
-            limits:
-              memory: "256Mi"
-              cpu: "200m"
-          livenessProbe:
-            httpGet:
-              path: /
+      annotations:                          // Annotations
+        prometheus.io/scrape: "true"        // Prometheus scrape ce pod
+        prometheus.io/port: "4200"          // Port : 4200 (port Nginx)
+        prometheus.io/path: "/metrics"      // Endpoint des metrics
+        
+    spec:                                   // Spécification du pod
+      serviceAccountName: default           // Compte de service
+      
+      securityContext:                      // Contexte de sécurité (pod)
+        runAsNonRoot: true                  // Pas d'exécution en tant que root
+        runAsUser: 101                      // Exécute en tant qu'utilisateur 101 (nginx)
+        fsGroup: 101                        // Groupe propriétaire des volumes
+        
+      containers:                           // Conteneurs du pod
+        - name: frontend                    // Nom du conteneur
+          image: devopspfe-frontend-app:latest  // Image Docker (Nginx + fichiers Angular)
+          imagePullPolicy: IfNotPresent     // Pull l'image seulement si pas présente
+          
+          ports:                            // Ports exposés
+            - containerPort: 4200           // Port du conteneur (Nginx écoute ici)
+              name: http                    // Nom du port
+              
+          resources:                        // Ressources CPU/Memory
+            requests:                       // Minimum requis
+              memory: "128Mi"               // 128 MB RAM (léger, juste du statique)
+              cpu: "100m"                   // 0.1 CPU
+            limits:                         // Maximum autorisé
+              memory: "256Mi"               // 256 MB RAM max
+              cpu: "200m"                   // 0.2 CPU max
+              
+          livenessProbe:                    // Vérifie si le pod est vivant
+            httpGet:                        // Requête HTTP
+              path: /                       // Root path
+              port: 4200                    // Port Nginx
+            initialDelaySeconds: 30         // Attend 30s avant de commencer
+            periodSeconds: 10               // Check toutes les 10 secondes
+            timeoutSeconds: 5               // Timeout de 5 secondes
+            failureThreshold: 3             // Redémarre après 3 échecs
+            
+          readinessProbe:                   // Vérifie si le pod est prêt à recevoir du trafic
+            httpGet:                        // Requête HTTP
+              path: /                       // Root path
               port: 4200
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 4200
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 2
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
-          volumeMounts:
-            - name: var-cache-nginx
-              mountPath: /var/cache/nginx
-            - name: var-run
-              mountPath: /var/run
-      volumes:
-        - name: var-cache-nginx
-          emptyDir: {}
-        - name: var-run
-          emptyDir: {}
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchExpressions:
-                    - key: app
-                      operator: In
-                      values:
-                        - frontend
-                topologyKey: kubernetes.io/hostname
+            initialDelaySeconds: 10         // Attend 10s avant de commencer
+            periodSeconds: 5                // Check toutes les 5 secondes
+            timeoutSeconds: 3               // Timeout de 3 secondes
+            failureThreshold: 2             // Retire du trafic après 2 échecs
+            
+          securityContext:                  // Contexte de sécurité (conteneur)
+            allowPrivilegeEscalation: false // Pas de privilege escalation
+            readOnlyRootFilesystem: true    // Système de fichiers EN LECTURE SEULE (sécurité)
+            capabilities:                   // Capabilities Linux
+              drop:                         // Retire les capabilities
+                - ALL                       // Retire TOUTES les capabilities
+                
+          volumeMounts:                     // Montage des volumes
+            - name: var-cache-nginx         // Volume pour le cache Nginx
+              mountPath: /var/cache/nginx   // Point de montage (writable)
+              
+            - name: var-run                 // Volume pour les fichiers temporaires
+              mountPath: /var/run           // Point de montage (writable)
+              
+      // Affinity: Évite de mettre les 2 frontends sur le même nœud
+      affinity:                             // Règles de placement des pods
+        podAntiAffinity:                    // Anti-affinité : éloigne les pods
+          preferredDuringSchedulingIgnoredDuringExecution:  // Préférence (pas hard)
+            - weight: 100                   // Poids : 100 (forte préférence)
+              podAffinityTerm:              // Terme d'affinité
+                labelSelector:              // Sélecteur de labels
+                  matchExpressions:         // Expressions
+                    - key: app              // Label clé
+                      operator: In          // Opérateur : "In"
+                      values:               // Valeurs
+                        - frontend          // Si label app = "frontend"
+                topologyKey: kubernetes.io/hostname  // Sur des nœuds DIFFÉRENTS
+                
+      volumes:                              // Définition des volumes
+        - name: var-cache-nginx             // Volume pour le cache Nginx
+          emptyDir: {}                      // emptyDir : volume temporaire (créé à chaque pod)
+          
+        - name: var-run                     // Volume pour les fichiers temporaires
+          emptyDir: {}                      // emptyDir : volume temporaire
+
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend
+
+// ===== 2. SERVICE - Point d'accès réseau =====
+apiVersion: v1                              // Version API
+kind: Service                               // Type : Service
+metadata:                                   // Métadonnées
+  name: frontend                            // Nom du service (DNS: frontend)
+  labels:                                   // Labels
+    app: frontend
+    
+spec:                                       // Spécification
+  selector:                                 // Sélectionne les pods
+    app: frontend
+    
+  type: ClusterIP                           // Type : IP interne au cluster (pas d'accès externe direct)
   
-  labels:
-    app: frontend
-spec:
-  selector:
-    app: frontend
-  type: ClusterIP
-  ports:
-    - port: 4200
-      targetPort: 4200
+  ports:                                    // Ports exposés
+    - port: 4200                            // Port du service (DNS)
+      targetPort: 4200                      // Port du pod
       protocol: TCP
       name: http
+
+// Effet: frontend:4200 (DNS interne) → pod:4200 (Nginx)
+
 ---
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: frontend-pdb
+
+// ===== 3. PODDISRUPTIONBUDGET - Haute disponibilité =====
+apiVersion: policy/v1                       // Version API
+kind: PodDisruptionBudget                   // Type : PodDisruptionBudget
+metadata:                                   // Métadonnées
+  name: frontend-pdb                        // Nom du PDB
   
-spec:
-  minAvailable: 1
-  selector:
+spec:                                       // Spécification
+  minAvailable: 1                           // Garde MINIMUM 1 pod en fonctionnement
+  selector:                                 // Sélectionne les pods
     matchLabels:
       app: frontend
+      
+// Effet: Garde au minimum 1 frontend actif (pas d'interruption complète)
+
 ---
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: frontend-hpa
+
+// ===== 4. HORIZONTALPODAUTOSCALER - Autoscaling =====
+apiVersion: autoscaling/v2                  // Version API pour l'autoscaling
+kind: HorizontalPodAutoscaler               // Type : HPA
+metadata:                                   // Métadonnées
+  name: frontend-hpa                        // Nom du HPA
   
-spec:
-  scaleTargetRef:
+spec:                                       // Spécification
+  scaleTargetRef:                           // Cible du scaling
     apiVersion: apps/v1
     kind: Deployment
-    name: frontend-deployment
-  minReplicas: 2
-  maxReplicas: 4
-  metrics:
+    name: frontend-deployment               // Cible : frontend-deployment
+    
+  minReplicas: 2                            // Minimum 2 pods
+  maxReplicas: 4                            // Maximum 4 pods
+  
+  metrics:                                  // Métriques pour déclencher le scaling
+    - type: Resource                        // Métrique de ressource
+      resource:                             // Ressource
+        name: cpu                           // CPU
+        target:                             // Cible
+          type: Utilization                 // Type : utilisation %
+          averageUtilization: 70            // Scale si CPU > 70% en moyenne
+          
     - type: Resource
       resource:
-        name: cpu
+        name: memory                        // Memory
         target:
           type: Utilization
-          averageUtilization: 70
-    - type: Resource
-      resource:
-        name: memory
-        target:
-          type: Utilization
-          averageUtilization: 80
+          averageUtilization: 80            // Scale si Memory > 80% en moyenne
+          
+// Effet: Ajoute automatiquement un pod si CPU/Memory dépasse le seuil
+// Retire un pod si CPU/Memory redescend

@@ -1,131 +1,173 @@
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pv-claim
-  labels:
+// =====================================================
+// DATABASE/POSTGRES.YAML - PostgreSQL Deployment
+// =====================================================
+// Déploie PostgreSQL 15 Alpine avec stockage persistant
+
+// ===== 1. PERSISTENTVOLUMECLAIM - Demande de stockage =====
+apiVersion: v1                              // Version API Kubernetes
+kind: PersistentVolumeClaim                 // Type : demande de stockage persistant
+metadata:                                   // Métadonnées
+  name: postgres-pv-claim                   // Nom du volume persistant
+  labels:                                   // Labels pour identification
     app: postgres
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
+    
+spec:                                       // Spécification du volume
+  accessModes:                              // Mode d'accès au volume
+    - ReadWriteOnce                         // Lecture/écriture par 1 seul pod à la fois
+    
+  resources:                                // Ressources demandées
     requests:
-      storage: 10Gi
+      storage: 10Gi                         // Demande 10 GiB de stockage pour la DB
+
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: postgres-deployment
-  labels:
+
+// ===== 2. DEPLOYMENT - Déploiement PostgreSQL =====
+apiVersion: apps/v1                         // Version API
+kind: Deployment                            // Type : Deployment
+metadata:                                   // Métadonnées
+  name: postgres-deployment                 // Nom du déploiement
+  labels:                                   // Labels
     app: postgres
-spec:
-  replicas: 1
-  strategy:
-    type: RollingUpdate
+    
+spec:                                       // Spécification
+  replicas: 1                               // 1 seule réplique (DB singleton, pas de clustering)
+  
+  strategy:                                 // Stratégie de mise à jour
+    type: RollingUpdate                     // Mise à jour progressive
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  selector:
-    matchLabels:
+      maxUnavailable: 0                     // 0 pod down (pas d'interruption DB)
+      maxSurge: 1                           // 1 pod supplémentaire pendant MaJ
+      
+  selector:                                 // Sélecteur de pods
+    matchLabels:                            // Par labels
       app: postgres
-  template:
-    metadata:
-      labels:
+      
+  template:                                 // Template de pod
+    metadata:                               // Métadonnées du pod
+      labels:                               // Labels du pod
         app: postgres
-      annotations:
-        prometheus.io/scrape: "false"
-    spec:
-      securityContext:
-        fsGroup: 999
-        runAsNonRoot: true
-        runAsUser: 999
-      containers:
-        - name: postgres
-          image: postgres:15-alpine
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 5432
-              name: postgres
-          env:
-            - name: POSTGRES_USER
-              valueFrom:
+      annotations:                          // Annotations
+        prometheus.io/scrape: "false"       // Pas de scrape Prometheus (DB interne)
+        
+    spec:                                   // Spécification du pod
+      securityContext:                      // Contexte de sécurité (au niveau pod)
+        fsGroup: 999                        // Groupe propriétaire des volumes (postgres:999)
+        runAsNonRoot: true                  // Pas d'exécution en tant que root
+        runAsUser: 999                      // Exécute en tant qu'utilisateur 999 (postgres)
+        
+      containers:                           // Conteneurs du pod
+        - name: postgres                    // Nom du conteneur
+          image: postgres:15-alpine         // Image PostgreSQL 15 Alpine (léger)
+          imagePullPolicy: IfNotPresent     // Pull l'image seulement si pas présente
+          
+          ports:                            // Ports exposés
+            - containerPort: 5432           // Port PostgreSQL
+              name: postgres                // Nom du port
+              
+          env:                              // Variables d'environnement
+            - name: POSTGRES_USER           // Utilisateur PostgreSQL
+              valueFrom:                    // Depuis un Secret
                 secretKeyRef:
                   name: postgres-secret
                   key: username
-            - name: POSTGRES_PASSWORD
-              valueFrom:
+                  
+            - name: POSTGRES_PASSWORD       // Mot de passe PostgreSQL
+              valueFrom:                    // Depuis un Secret (sécurisé)
                 secretKeyRef:
                   name: postgres-secret
                   key: password
-            - name: POSTGRES_DB
-              valueFrom:
+                  
+            - name: POSTGRES_DB             // Nom de la base de données
+              valueFrom:                    // Depuis un ConfigMap
                 configMapKeyRef:
                   name: database-config
-                  key: DB_NAME
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
-          resources:
-            requests:
+                  key: DB_NAME              // DB_NAME = "education"
+                  
+            - name: PGDATA                  // Répertoire des données PostgreSQL
+              value: /var/lib/postgresql/data/pgdata  // Chemin dans le volume
+              
+          resources:                        // Ressources CPU/Memory
+            requests:                       // Minimum requis
               memory: "256Mi"
               cpu: "250m"
-            limits:
+            limits:                         // Maximum autorisé
               memory: "512Mi"
               cpu: "500m"
-          volumeMounts:
-            - name: postgres-storage
-              mountPath: /var/lib/postgresql/data
-          livenessProbe:
-            exec:
+              
+          volumeMounts:                     // Montage des volumes
+            - name: postgres-storage        // Nom du volume
+              mountPath: /var/lib/postgresql/data  // Point de montage dans le conteneur
+              
+          livenessProbe:                    // Vérifie si le pod est vivant
+            exec:                           // Exécute une commande
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER  // Commande PostgreSQL pour vérifier la santé
+            initialDelaySeconds: 30         // Attend 30s avant de commencer
+            periodSeconds: 10               // Check toutes les 10 secondes
+            timeoutSeconds: 5               // Timeout de 5 secondes
+            failureThreshold: 6             // Redémarre après 6 échecs
+            
+          readinessProbe:                   // Vérifie si le pod est prêt
+            exec:                           // Exécute une commande
               command:
                 - /bin/sh
                 - -c
                 - pg_isready -U $POSTGRES_USER
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 6
-          readinessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - pg_isready -U $POSTGRES_USER
-            initialDelaySeconds: 10
-            periodSeconds: 5
-            timeoutSeconds: 3
-            failureThreshold: 3
-          securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: false
-            capabilities:
+            initialDelaySeconds: 10         // Attend 10s avant de commencer
+            periodSeconds: 5                // Check toutes les 5 secondes
+            timeoutSeconds: 3               // Timeout de 3 secondes
+            failureThreshold: 3             // Retire du trafic après 3 échecs
+            
+          securityContext:                  // Contexte de sécurité (conteneur)
+            allowPrivilegeEscalation: false // Pas de privilege escalation
+            readOnlyRootFilesystem: false   // Système de fichiers modifiable (PostgreSQL en a besoin)
+            capabilities:                   // Capabilities Linux
               drop:
-                - ALL
-      volumes:
-        - name: postgres-storage
-          persistentVolumeClaim:
-            claimName: postgres-pv-claim
+                - ALL                       // Retire toutes les capabilities
+                
+      volumes:                              // Définition des volumes
+        - name: postgres-storage            // Nom du volume
+          persistentVolumeClaim:            // Utilise un PersistentVolumeClaim
+            claimName: postgres-pv-claim    // Référence au PVC créé plus haut
+
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres
-  labels:
+
+// ===== 3. SERVICE - Point d'accès réseau =====
+apiVersion: v1                              // Version API
+kind: Service                               // Type : Service
+metadata:                                   // Métadonnées
+  name: postgres                            // Nom du service (DNS: postgres)
+  labels:                                   // Labels
     app: postgres
-spec:
-  selector:
+    
+spec:                                       // Spécification
+  selector:                                 // Sélectionne les pods
     app: postgres
-  ports:
+    
+  ports:                                    // Ports exposés
     - protocol: TCP
-      port: 5432
-      targetPort: 5432
+      port: 5432                           // Port du service (DNS)
+      targetPort: 5432                     // Port du pod auquel transférer
       name: postgres
-  type: ClusterIP
+      
+  type: ClusterIP                          // Type : IP interne au cluster
+
+// Effet: Les services backend accèdent à postgres via : postgres:5432
+
 ---
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: postgres-pdb
-spec:
-  minAvailable: 1
-  selector:
+
+// ===== 4. PODDISRUPTIONBUDGET - Haute disponibilité =====
+apiVersion: policy/v1                       // Version API
+kind: PodDisruptionBudget                   // Type : PodDisruptionBudget
+metadata:                                   // Métadonnées
+  name: postgres-pdb                        // Nom du PDB
+  
+spec:                                       // Spécification
+  minAvailable: 1                           // Garde MINIMUM 1 pod en fonctionnement
+  selector:                                 // Sélectionne les pods
     matchLabels:
       app: postgres
+      
+// Effet: PostgreSQL ne peut pas être interrompu (gardien de la HA)
