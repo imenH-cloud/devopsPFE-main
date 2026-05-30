@@ -44,6 +44,10 @@ export class StudentService {
     return this.create(student);
   }
 
+  createStudentWithFile(formData: FormData): Observable<Student> {
+    return this.http.post<Student>('/student', formData, { withCredentials: true });
+  }
+
   update(id: number, student: Student): Observable<Student> {
     return this.http.patch<Student>(`/student/${id}`, student, { withCredentials: true });
   }

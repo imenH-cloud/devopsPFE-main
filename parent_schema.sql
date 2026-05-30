@@ -1,0 +1,15 @@
+DROP TABLE IF EXISTS parent CASCADE;
+
+CREATE TABLE parent (
+  id SERIAL PRIMARY KEY,
+  "firstName" VARCHAR(100) NOT NULL,
+  "lastName" VARCHAR(100) NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  "phoneNumber" VARCHAR(20),
+  "NCIN" VARCHAR(20),
+  address VARCHAR(255),
+  "typeInsurance" VARCHAR(50),
+  "Numeroinsurance" VARCHAR(50),
+  job VARCHAR(100),
+  "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

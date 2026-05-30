@@ -15,7 +15,9 @@ pipeline {
     
     environment {
         DOCKER_REGISTRY = 'eline2016'
-        GIT_REPO = 'https://github.com/imenH-cloud/devops-education-platform.git'
+        GIT_REPO = 'https://github.com/imenH-cloud/devopsPFE-main.git'
+        GITOPS_REPO = 'https://github.com/imenH-cloud/devopsPFE-gitops.git'
+        ARGOCD_SERVER = 'localhost:32000'
     }
     
     stages {
@@ -122,8 +124,8 @@ pipeline {
             steps {
                 script {
                     echo "🔨 Building frontend-app:${BUILD_NUMBER}..."
-                    dir('frontend/app') {
-                        bat "docker build --build-arg NODE_OPTIONS=\"--max-old-space-size=4096\" -t ${DOCKER_REGISTRY}/devopspfe-frontend-app:${BUILD_NUMBER} ."
+                    dir('frontend') {
+                        bat "docker build -f Dockerfile.prod -t ${DOCKER_REGISTRY}/devopspfe-frontend-app:${BUILD_NUMBER} ."
                     }
                 }
             }
@@ -177,38 +179,61 @@ pipeline {
             }
         }
         
-        stage('Update GitOps') {
+        stage('Update GitOps Repo') {
             when {
                 expression { params.PUSH_DOCKER == true }
             }
             steps {
                 script {
-                    echo "🔄 Updating GitOps manifests..."
+                    echo "🔄 Updating GitOps repo (devopsPFE-gitops)..."
                     withCredentials([string(credentialsId: 'github-token', variable: 'GITHUB_TOKEN')]) {
                         bat '''
-                            if exist gitops-temp rmdir /s /q gitops-temp || exit /b 0
+                            setlocal enabledelayedexpansion
+                            if exist gitops-temp rmdir /s /q gitops-temp
                             
-                            set "REPO_URL=https://%GITHUB_TOKEN%@github.com/imenH-cloud/devops-education-platform-gitops.git"
+                            set "GITOPS_URL=https://%GITHUB_TOKEN%@github.com/imenH-cloud/devopsPFE-gitops.git"
                             
-                            git clone !REPO_URL! gitops-temp
+                            git clone !GITOPS_URL! gitops-temp
                             cd gitops-temp
                             
-                            echo Updating manifests...
+                            echo Updating kubernetes manifests in GitOps repo...
+                            
+                            REM Update backend service deployments individually
                             for %%s in (activity auth classroom gateway parent student teacher user) do (
-                                powershell -Command "(Get-Content 'kubernetes/backend/%%s-service.yaml') -replace 'image: .*', 'image: eline2016/devopspfe-%%s-service:%BUILD_NUMBER%' | Set-Content 'kubernetes/backend/%%s-service.yaml'"
+                                if exist kubernetes\backend\%%s-service.yaml (
+                                    powershell -Command "$content = Get-Content 'kubernetes\backend\%%s-service.yaml' -Raw; $content = $content -replace 'image: devopspfe-%%s-service:[^\s]*', 'image: eline2016/devopspfe-%%s-service:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\backend\%%s-service.yaml'"
+                                )
                             )
                             
-                            powershell -Command "(Get-Content 'kubernetes/frontend/frontend-app.yaml') -replace 'image: .*', 'image: eline2016/devopspfe-frontend-app:%BUILD_NUMBER%' | Set-Content 'kubernetes/frontend/frontend-app.yaml'"
+                            REM Update gateway backend specifically
+                            if exist kubernetes\backend\gateway-backend.yaml (
+                                powershell -Command "$content = Get-Content 'kubernetes\backend\gateway-backend.yaml' -Raw; $content = $content -replace 'image: devopspfe-gateway-backend:[^\s]*', 'image: eline2016/devopspfe-gateway-backend:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\backend\gateway-backend.yaml'"
+                            )
                             
+                            REM Update frontend deployment if exists
+                            if exist kubernetes\frontend\frontend-app.yaml (
+                                powershell -Command "$content = Get-Content 'kubernetes\frontend\frontend-app.yaml' -Raw; $content = $content -replace 'image: devopspfe-frontend-app:[^\s]*', 'image: eline2016/devopspfe-frontend-app:%BUILD_NUMBER%'; $content | Set-Content 'kubernetes\frontend\frontend-app.yaml'"
+                            )
+                            
+                            REM Verify changes
+                            echo .
+                            echo Updated manifests:
+                            git diff --name-only
+                            
+                            REM Commit and push
                             git config user.email "jenkins@devops.local"
                             git config user.name "Jenkins CI/CD"
-                            git add .
-                            git commit -m "Build %BUILD_NUMBER% - update Docker images" || exit /b 0
+                            git add kubernetes/
+                            git commit -m "Jenkins Build #%BUILD_NUMBER% - Updated Docker images" || (
+                                echo ✅ No changes to commit
+                                exit /b 0
+                            )
                             git push origin main
                             
                             cd ..
                             rmdir /s /q gitops-temp
-                            echo ✅ GitOps manifests updated
+                            echo ✅ GitOps repo updated successfully
+                            echo ✅ Argo CD will sync automatically
                         '''
                     }
                 }
@@ -226,8 +251,10 @@ pipeline {
         
         success {
             echo "✅ BUILD SUCCESSFUL - Build #${BUILD_NUMBER}"
-            echo "📤 Images pushed: eline2016/devopspfe-*:${BUILD_NUMBER}"
-            echo "🔄 GitOps: Updated"
+            echo "📤 Images pushed to Docker Hub: eline2016/devopspfe-*:${BUILD_NUMBER}"
+            echo "🔄 GitOps repo updated: devopsPFE-gitops/k8s/"
+            echo "🚀 Argo CD will auto-sync from GitOps repo"
+            echo "🎯 Environment: ${DEPLOY_ENV}"
         }
         
         failure {

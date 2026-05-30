@@ -201,7 +201,7 @@ export class AppService {
   // ============ CLASSROOM SERVICE METHODS ============
   async getClassrooms() {
     const response = await lastValueFrom(
-      this.httpService.get('http://classroom-service:3006/classroom?page=1&limit=100')
+      this.httpService.get('http://classroom-service:3006/classroom')
     );
     return response.data;
   }

@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS parent (
+  id SERIAL PRIMARY KEY,
+  userId INTEGER,
+  phoneNumber VARCHAR(20),
+  address VARCHAR(255),
+  NCIN VARCHAR(20),
+  typeInsurance VARCHAR(50),
+  Numeroinsurance VARCHAR(50),
+  job VARCHAR(100),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

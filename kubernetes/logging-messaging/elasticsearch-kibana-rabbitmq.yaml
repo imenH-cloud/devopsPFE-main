@@ -1,0 +1,360 @@
+---
+# Elasticsearch StatefulSet
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: logging
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: elasticsearch-pv
+  namespace: logging
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /data/elasticsearch
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: logging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: logging
+spec:
+  serviceName: elasticsearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+      - name: elasticsearch
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+        ports:
+        - containerPort: 9200
+          name: http
+        - containerPort: 9300
+          name: transport
+        env:
+        - name: discovery.type
+          value: single-node
+        - name: xpack.security.enabled
+          value: "false"
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/elasticsearch/data
+        livenessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: 9200
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: elasticsearch-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: logging
+spec:
+  selector:
+    app: elasticsearch
+  ports:
+  - port: 9200
+    targetPort: 9200
+    name: http
+  - port: 9300
+    targetPort: 9300
+    name: transport
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-nodeport
+  namespace: logging
+spec:
+  selector:
+    app: elasticsearch
+  type: NodePort
+  ports:
+  - port: 9200
+    targetPort: 9200
+    nodePort: 30920
+    name: http
+
+---
+# Kibana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+      - name: kibana
+        image: docker.elastic.co/kibana/kibana:8.11.0
+        ports:
+        - containerPort: 5601
+          name: http
+        env:
+        - name: ELASTICSEARCH_HOSTS
+          value: "http://elasticsearch:9200"
+        - name: ELASTICSEARCH_USERNAME
+          value: "elastic"
+        livenessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: 5601
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: logging
+spec:
+  selector:
+    app: kibana
+  ports:
+  - port: 5601
+    targetPort: 5601
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-nodeport
+  namespace: logging
+spec:
+  selector:
+    app: kibana
+  type: NodePort
+  ports:
+  - port: 5601
+    targetPort: 5601
+    nodePort: 30561
+    name: http
+
+---
+# RabbitMQ StatefulSet
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: message-queue
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+  namespace: message-queue
+data:
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_peer_discovery_k8s].
+  rabbitmq.conf: |
+    cluster_formation.peer_discovery_backend = rabbit_peer_discovery_k8s
+    cluster_formation.k8s.host = kubernetes.default.svc.cluster.local
+    cluster_formation.k8s.address_type = hostname
+    cluster_formation.node_cleanup.interval = 10
+    cluster_partition_handling = autoheal
+    management.listener.ssl = false
+    management.load_definitions = /etc/rabbitmq/definitions.json
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-definitions
+  namespace: message-queue
+data:
+  definitions.json: |
+    {
+      "users": [
+        {"name": "guest", "password": "guest", "tags": "administrator"}
+      ],
+      "vhosts": [
+        {"name": "/"},
+        {"name": "education"}
+      ],
+      "permissions": [
+        {
+          "user": "guest",
+          "vhost": "/",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        },
+        {
+          "user": "guest",
+          "vhost": "education",
+          "configure": ".*",
+          "write": ".*",
+          "read": ".*"
+        }
+      ],
+      "exchanges": [
+        {"name": "education.events", "vhost": "education", "type": "topic", "durable": true},
+        {"name": "education.logs", "vhost": "education", "type": "direct", "durable": true}
+      ],
+      "queues": [
+        {"name": "user.events", "vhost": "education", "durable": true},
+        {"name": "activity.logs", "vhost": "education", "durable": true},
+        {"name": "classroom.notifications", "vhost": "education", "durable": true}
+      ],
+      "bindings": [
+        {"source": "education.events", "destination": "user.events", "destination_type": "queue", "routing_key": "user.*", "vhost": "education"},
+        {"source": "education.logs", "destination": "activity.logs", "destination_type": "queue", "routing_key": "activity", "vhost": "education"},
+        {"source": "education.events", "destination": "classroom.notifications", "destination_type": "queue", "routing_key": "classroom.*", "vhost": "education"}
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rabbitmq
+  namespace: message-queue
+spec:
+  serviceName: rabbitmq
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.12-management-alpine
+        ports:
+        - containerPort: 5672
+          name: amqp
+        - containerPort: 15672
+          name: management
+        - containerPort: 4369
+          name: epmd
+        - containerPort: 25672
+          name: clustering
+        env:
+        - name: RABBITMQ_DEFAULT_USER
+          value: guest
+        - name: RABBITMQ_DEFAULT_PASS
+          value: guest
+        - name: RABBITMQ_DEFAULT_VHOST
+          value: "/"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/rabbitmq/
+        - name: definitions
+          mountPath: /etc/rabbitmq/definitions.json
+          subPath: definitions.json
+        - name: data
+          mountPath: /var/lib/rabbitmq
+        livenessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "-q", "ping"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["rabbitmq-diagnostics", "-q", "ping"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: rabbitmq-config
+      - name: definitions
+        configMap:
+          name: rabbitmq-definitions
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: message-queue
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+  - port: 5672
+    targetPort: 5672
+    name: amqp
+  - port: 15672
+    targetPort: 15672
+    name: management
+  - port: 4369
+    targetPort: 4369
+    name: epmd
+  - port: 25672
+    targetPort: 25672
+    name: clustering
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-nodeport
+  namespace: message-queue
+spec:
+  selector:
+    app: rabbitmq
+  type: NodePort
+  ports:
+  - port: 5672
+    targetPort: 5672
+    nodePort: 30672
+    name: amqp
+  - port: 15672
+    targetPort: 15672
+    nodePort: 31672
+    name: management

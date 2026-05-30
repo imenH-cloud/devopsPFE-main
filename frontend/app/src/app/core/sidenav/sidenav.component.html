@@ -172,7 +172,7 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center">
           <img
-            src="https://via.placeholder.com/40"
+            [src]="getProfileImageUrl()"
             alt="Profile"
             class="w-8 h-8 rounded-full object-cover border-2 border-blue-300 dark:border-blue-500"
           />
@@ -181,7 +181,7 @@
           </div>
         </div>
         <button
-          class="p-2 text-blue-600 rounded-lg hover:text-white hover:bg-blue-600 dark:text-blue-300 dark:hover:text-white dark:hover:bg-blue-700 transition-all duration-200"
+          (click)="logout()"\n          class="p-2 text-blue-600 rounded-lg hover:text-white hover:bg-blue-600 dark:text-blue-300 dark:hover:text-white dark:hover:bg-blue-700 transition-all duration-200"
           aria-label="Logout"
           title="Logout"
         >

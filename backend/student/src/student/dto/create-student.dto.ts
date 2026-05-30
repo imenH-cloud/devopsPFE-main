@@ -25,9 +25,17 @@ export class CreateStudentDto {
     @IsString()
     phoneNumber: string;
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    address: string;
+    address?: string;
+
+    @IsOptional()
+    @IsString()
+    observations?: string;
+
+    @IsOptional()
+    @IsString()
+    reports?: string;
 
     @IsOptional()
     @IsBoolean()

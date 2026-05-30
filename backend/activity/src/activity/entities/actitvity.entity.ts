@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Classroom } from '../../shared/entities/classroom.entity';
 
 @Entity()
@@ -36,6 +36,12 @@ export class Activity {
     attachments?: string[];
     comments?: string;
   };
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
 
   @ManyToOne(() => Classroom, classroom => classroom.activities, { nullable: true })
   @JoinColumn({ name: 'classroomid' })

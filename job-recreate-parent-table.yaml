@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fix-parent-casing
+  namespace: education
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: migrate
+        image: postgres:15-alpine
+        env:
+        - name: PGPASSWORD
+          value: password123
+        command:
+        - /bin/sh
+        - -c
+        - |
+          psql -h postgres -U education -d education_db -c "DROP TABLE IF EXISTS parent CASCADE;" && psql -h postgres -U education -d education_db -c 'CREATE TABLE parent (id SERIAL PRIMARY KEY, \"firstName\" VARCHAR(100) NOT NULL, \"lastName\" VARCHAR(100) NOT NULL, email VARCHAR(255) UNIQUE NOT NULL, \"phoneNumber\" VARCHAR(20), \"NCIN\" VARCHAR(20), address VARCHAR(255), \"typeInsurance\" VARCHAR(50), \"Numeroinsurance\" VARCHAR(50), job VARCHAR(100), \"createdAt\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP);'
+      restartPolicy: Never
