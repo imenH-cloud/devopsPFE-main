@@ -1,152 +1,192 @@
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-all-ingress
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
+// =====================================================
+// NETWORK-POLICIES.YAML - Règles de firewall réseau
+// =====================================================
+// Les NetworkPolicies définissent les flux de trafic autorisés entre pods
+// C'est comme un firewall au niveau des pods Kubernetes
+
+// ===== POLICY 1 : Bloc tout par défaut (Deny All) =====
+apiVersion: networking.k8s.io/v1            // Version API NetworkPolicy
+kind: NetworkPolicy                         // Type d'objet : politique réseau
+metadata:                                   // Métadonnées
+  name: deny-all-ingress                    // Nom : "bloquer tout le trafic entrant"
+spec:                                       // Spécification
+  podSelector: {}                           // Sélecteur vide = s'applique à TOUS les pods
+  policyTypes:                              // Types de trafic contrôlés
+    - Ingress                               // Bloc le trafic entrant par défaut
+
+// Effet : TOUS les pods refusent les connexions entrantes
+// Les autres policies ajoutent ensuite les exceptions (allow)
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-gateway-to-services
-spec:
-  podSelector:
-    matchLabels:
-      tier: backend
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: gateway
-      ports:
+
+// ===== POLICY 2 : Permet Gateway → Services Backend =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-gateway-to-services           // Nom : "autoriser gateway à communiquer avec les services"
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Par labels
+      tier: backend                         // Label : tier = backend (tous les services backend)
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              app: gateway                  // Label : app = gateway (la gateway)
+      ports:                                // Ports autorisés
+        - protocol: TCP                     // TCP
+          port: 3000                        // Port 3000 (Gateway)
         - protocol: TCP
-          port: 3000
+          port: 3001                        // Port 3001 (Auth Service)
         - protocol: TCP
-          port: 3001
+          port: 3002                        // Port 3002 (User Service)
         - protocol: TCP
-          port: 3002
+          port: 3003                        // Port 3003 (Activity Service)
         - protocol: TCP
-          port: 3003
+          port: 3004                        // Port 3004 (Parent Service)
         - protocol: TCP
-          port: 3004
+          port: 3005                        // Port 3005 (Student Service)
         - protocol: TCP
-          port: 3005
+          port: 3006                        // Port 3006 (Classroom Service)
         - protocol: TCP
-          port: 3006
-        - protocol: TCP
-          port: 3007
+          port: 3007                        // Port 3007 (Teacher Service)
+
+// Effet : La Gateway peut appeler TOUS les services backend
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-services-to-database
-spec:
-  podSelector:
-    matchLabels:
-      app: postgres
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: backend
-      ports:
+
+// ===== POLICY 3 : Permet Services → PostgreSQL Database =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-services-to-database          // Nom : "autoriser services à accéder à la DB"
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Par labels
+      app: postgres                         // Label : app = postgres (la base de données)
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              tier: backend                 // Label : tier = backend (tous les services)
+      ports:                                // Ports autorisés
         - protocol: TCP
-          port: 5432
+          port: 5432                        // Port PostgreSQL
+
+// Effet : Tous les services backend peuvent accéder à PostgreSQL
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-services-to-redis
-spec:
-  podSelector:
-    matchLabels:
-      app: redis
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: backend
-      ports:
+
+// ===== POLICY 4 : Permet Services → Redis Cache =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-services-to-redis             // Nom : "autoriser services à accéder au cache"
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Par labels
+      app: redis                            // Label : app = redis (le cache Redis)
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              tier: backend                 // Label : tier = backend (tous les services)
+      ports:                                // Ports autorisés
         - protocol: TCP
-          port: 6379
+          port: 6379                        // Port Redis
+
+// Effet : Tous les services backend peuvent accéder à Redis
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-services-to-elasticsearch
-spec:
-  podSelector:
-    matchLabels:
-      app: elasticsearch
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: backend
-      ports:
+
+// ===== POLICY 5 : Permet Services → Elasticsearch =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-services-to-elasticsearch     // Nom : "autoriser services à accéder à Elasticsearch"
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Par labels
+      app: elasticsearch                    // Label : app = elasticsearch
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              tier: backend                 // Label : tier = backend (tous les services)
+      ports:                                // Ports autorisés
         - protocol: TCP
-          port: 9200
+          port: 9200                        // Port Elasticsearch
+
+// Effet : Tous les services backend peuvent accéder à Elasticsearch (indexation, recherche)
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-frontend-to-gateway
-spec:
-  podSelector:
-    matchLabels:
-      app: gateway
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              tier: frontend
-      ports:
+
+// ===== POLICY 6 : Permet Frontend → Gateway =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-frontend-to-gateway           // Nom : "autoriser frontend à appeler la gateway"
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Par labels
+      app: gateway                          // Label : app = gateway (la gateway)
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              tier: frontend                // Label : tier = frontend (le frontend)
+      ports:                                // Ports autorisés
         - protocol: TCP
-          port: 3000
+          port: 3000                        // Port Gateway
+
+// Effet : Le frontend Angular peut appeler l'API Gateway
+
 ---
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-prometheus-scrape
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app: prometheus
-      ports:
+
+// ===== POLICY 7 : Permet Prometheus → Services (Monitoring) =====
+apiVersion: networking.k8s.io/v1            // Version API
+kind: NetworkPolicy                         // Type d'objet
+metadata:                                   // Métadonnées
+  name: allow-prometheus-scrape             // Nom : "autoriser prometheus à scraper les metrics"
+spec:                                       // Spécification
+  podSelector: {}                           // Sélecteur vide = s'applique à TOUS les pods
+  policyTypes:                              // Types de trafic
+    - Ingress                               // Trafic entrant
+  ingress:                                  // Règles d'entrée
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              app: prometheus               // Label : app = prometheus (l'outil de monitoring)
+      ports:                                // Ports autorisés
         - protocol: TCP
-          port: 9090
+          port: 9090                        // Port Prometheus
         - protocol: TCP
-          port: 3000
+          port: 3000                        // Port Gateway (metrics)
         - protocol: TCP
-          port: 3001
+          port: 3001                        // Port Auth Service (metrics)
         - protocol: TCP
-          port: 3002
+          port: 3002                        // Port User Service (metrics)
         - protocol: TCP
-          port: 3003
+          port: 3003                        // Port Activity Service (metrics)
         - protocol: TCP
-          port: 3004
+          port: 3004                        // Port Parent Service (metrics)
         - protocol: TCP
-          port: 3005
+          port: 3005                        // Port Student Service (metrics)
         - protocol: TCP
-          port: 3006
+          port: 3006                        // Port Classroom Service (metrics)
         - protocol: TCP
-          port: 3007
+          port: 3007                        // Port Teacher Service (metrics)
         - protocol: TCP
-          port: 5672
+          port: 5672                        // Port RabbitMQ (metrics)
+
+// Effet : Prometheus peut scraper les métriques (Prometheus exporter) de tous les services

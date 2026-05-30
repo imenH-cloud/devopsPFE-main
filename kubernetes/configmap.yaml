@@ -1,78 +1,103 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config
-data:
-  NODE_ENV: production
-  LOG_LEVEL: info
-  LOG_FORMAT: json
-  API_PREFIX: /api
-  CORS_ORIGIN: "*"
-  CORS_CREDENTIALS: "true"
-  CORS_MAX_AGE: "3600"
-  RATE_LIMIT_WINDOW_MS: "900000"
-  RATE_LIMIT_MAX_REQUESTS: "100"
-  SESSION_TIMEOUT: "3600"
-  DEFAULT_PAGE_SIZE: "20"
-  MAX_PAGE_SIZE: "100"
+// =====================================================
+// CONFIGMAP.YAML - Configuration des variables d'environnement
+// =====================================================
+// Les ConfigMaps stockent les données de configuration (non-sensibles)
+// Les pods accèdent à ces données via des variables d'environnement ou des montages de fichiers
+
+// ===== CONFIGMAP 1 : Application Configuration =====
+apiVersion: v1                          // Version API Kubernetes
+kind: ConfigMap                         // Type d'objet : ConfigMap (stockage de configuration)
+metadata:                               // Métadonnées de l'objet
+  name: app-config                      // Nom unique du ConfigMap (référencé par les pods)
+data:                                   // Bloc contenant les clé-valeur de configuration
+  NODE_ENV: production                  // Mode production (optimisations, moins de logs)
+  LOG_LEVEL: info                       // Niveau de log : info (logs importants seulement)
+  LOG_FORMAT: json                      // Format des logs : JSON (structured logging)
+  API_PREFIX: /api                      // Préfixe des routes API : /api/users, /api/classrooms, etc.
+  CORS_ORIGIN: "*"                      // CORS : accepte les requêtes de TOUTES les origines
+  CORS_CREDENTIALS: "true"              // CORS : accepte les cookies et credentials
+  CORS_MAX_AGE: "3600"                  // CORS : cache la préflight request pendant 3600 secondes
+  RATE_LIMIT_WINDOW_MS: "900000"        // Fenêtre de rate limiting : 900000ms = 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: "100"        // Limite : max 100 requêtes par fenêtre
+  SESSION_TIMEOUT: "3600"               // Timeout de session : 3600 secondes = 1 heure
+  DEFAULT_PAGE_SIZE: "20"               // Pagination : taille par défaut = 20 éléments
+  MAX_PAGE_SIZE: "100"                  // Pagination : taille max = 100 éléments
+
+---                                     // Séparateur : commence une nouvelle ressource YAML
+
+// ===== CONFIGMAP 2 : Database Configuration =====
+apiVersion: v1                          // Version API Kubernetes
+kind: ConfigMap                         // Type d'objet : ConfigMap
+metadata:                               // Métadonnées
+  name: database-config                 // Nom du ConfigMap pour la configuration DB
+data:                                   // Configuration de la base de données
+  DB_HOST: postgres                     // Hôte DB : nom du service Kubernetes (résolution DNS automatique)
+  DB_PORT: "5432"                       // Port PostgreSQL : 5432 (port par défaut)
+  DB_NAME: education                    // Nom de la base de données
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: database-config
-data:
-  DB_HOST: postgres
-  DB_PORT: "5432"
-  DB_NAME: education
+
+// ===== CONFIGMAP 3 : Redis Cache Configuration =====
+apiVersion: v1                          // Version API
+kind: ConfigMap                         // Type d'objet
+metadata:                               // Métadonnées
+  name: cache-config                    // Nom du ConfigMap pour le cache
+data:                                   // Configuration Redis
+  REDIS_HOST: redis                     // Hôte Redis : service Kubernetes redis
+  REDIS_PORT: "6379"                    // Port Redis : 6379 (port par défaut)
+  REDIS_DB: "0"                         // Base de données Redis : 0 (par défaut)
+  REDIS_TTL: "3600"                     // Temps de vie des clés : 3600 secondes (1 heure)
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cache-config
-data:
-  REDIS_HOST: redis
-  REDIS_PORT: "6379"
-  REDIS_DB: "0"
-  REDIS_TTL: "3600"
+
+// ===== CONFIGMAP 4 : RabbitMQ Message Queue Configuration =====
+apiVersion: v1                          // Version API
+kind: ConfigMap                         // Type d'objet
+metadata:                               // Métadonnées
+  name: messaging-config                // Nom du ConfigMap pour le messaging
+data:                                   // Configuration RabbitMQ
+  RABBITMQ_HOST: rabbitmq               // Hôte RabbitMQ : service Kubernetes rabbitmq
+  RABBITMQ_PORT: "5672"                 // Port AMQP : 5672 (protocole de messagerie)
+  RABBITMQ_MANAGEMENT_PORT: "15672"     // Port Management UI : 15672 (interface web)
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: messaging-config
-data:
-  RABBITMQ_HOST: rabbitmq
-  RABBITMQ_PORT: "5672"
-  RABBITMQ_MANAGEMENT_PORT: "15672"
+
+// ===== CONFIGMAP 5 : Elasticsearch Configuration =====
+apiVersion: v1                          // Version API
+kind: ConfigMap                         // Type d'objet
+metadata:                               // Métadonnées
+  name: elasticsearch-config            // Nom du ConfigMap pour Elasticsearch
+data:                                   // Configuration Elasticsearch
+  ELASTICSEARCH_HOST: elasticsearch     // Hôte Elasticsearch : service Kubernetes
+  ELASTICSEARCH_PORT: "9200"            // Port Elasticsearch : 9200 (API REST)
+  ELASTICSEARCH_URL: http://elasticsearch:9200  // URL complète pour les requêtes
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: elasticsearch-config
-data:
-  ELASTICSEARCH_HOST: elasticsearch
-  ELASTICSEARCH_PORT: "9200"
-  ELASTICSEARCH_URL: http://elasticsearch:9200
+
+// ===== CONFIGMAP 6 : MinIO (Object Storage) Configuration =====
+apiVersion: v1                          // Version API
+kind: ConfigMap                         // Type d'objet
+metadata:                               // Métadonnées
+  name: minio-config                    // Nom du ConfigMap pour MinIO
+data:                                   // Configuration MinIO
+  MINIO_HOST: minio                     // Hôte MinIO : service Kubernetes
+  MINIO_PORT: "9000"                    // Port API MinIO : 9000
+  MINIO_CONSOLE_PORT: "9001"            // Port Console web MinIO : 9001
+  MINIO_ENDPOINT: minio:9000            // Endpoint pour les clients MinIO
+  MINIO_USE_SSL: "false"                // SSL désactivé (environnement de développement)
+  MINIO_BUCKET: education               // Nom du bucket par défaut
+
 ---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: minio-config
-data:
-  MINIO_HOST: minio
-  MINIO_PORT: "9000"
-  MINIO_CONSOLE_PORT: "9001"
-  MINIO_ENDPOINT: minio:9000
-  MINIO_USE_SSL: "false"
-  MINIO_BUCKET: education
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: monitoring-config
-data:
-  PROMETHEUS_HOST: prometheus
-  PROMETHEUS_PORT: "9090"
-  PROMETHEUS_URL: http://prometheus:9090
-  GRAFANA_HOST: grafana
-  GRAFANA_PORT: "3000"
-  GRAFANA_URL: http://grafana:3000
+
+// ===== CONFIGMAP 7 : Monitoring Configuration =====
+apiVersion: v1                          // Version API
+kind: ConfigMap                         // Type d'objet
+metadata:                               // Métadonnées
+  name: monitoring-config               // Nom du ConfigMap pour le monitoring
+data:                                   // Configuration Prometheus et Grafana
+  PROMETHEUS_HOST: prometheus           // Hôte Prometheus : service Kubernetes
+  PROMETHEUS_PORT: "9090"               // Port Prometheus : 9090 (API et UI)
+  PROMETHEUS_URL: http://prometheus:9090  // URL complète pour les requêtes
+  GRAFANA_HOST: grafana                 // Hôte Grafana : service Kubernetes
+  GRAFANA_PORT: "3000"                  // Port Grafana : 3000 (UI dashboards)
+  GRAFANA_URL: http://grafana:3000      // URL complète pour les dashboards

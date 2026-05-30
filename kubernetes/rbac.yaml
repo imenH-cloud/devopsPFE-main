@@ -1,81 +1,118 @@
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: devops-education-sa
+// =====================================================
+// RBAC.YAML - Contrôle d'accès basé sur les rôles (RBAC)
+// =====================================================
+// RBAC définit QUI a accès À QUOI dans le cluster Kubernetes
+// Sécurité : limite les permissions des pods et utilisateurs
+
+// ===== SERVICEA CCOUNT : Identité pour les pods =====
+apiVersion: v1                              // Version API Kubernetes
+kind: ServiceAccount                        // Type d'objet : compte de service pour les pods
+metadata:                                   // Métadonnées
+  name: devops-education-sa                 // Nom du ServiceAccount (identité pour les pods)
+
+---                                         // Séparateur : nouvelle ressource
+
+// ===== CLUSTERROLE : Permissions globales du cluster =====
+apiVersion: rbac.authorization.k8s.io/v1   // Version API RBAC
+kind: ClusterRole                           // Type : rôle au niveau du cluster (pas limité à un namespace)
+metadata:                                   // Métadonnées
+  name: devops-education-role               // Nom du rôle (référencé par ClusterRoleBinding)
+rules:                                      // Liste des permissions
+  
+  // ===== Groupe 1 : Permissions sur les Pods =====
+  - apiGroups: [""]                         // Groupe API : "" = API core Kubernetes
+    resources: ["pods", "pods/logs", "services", "endpoints"]  // Ressources autorisées
+    verbs: ["get", "list", "watch"]         // Actions autorisées : consulter, lister, regarder en temps réel
+  
+  // ===== Groupe 2 : Permissions sur les Deployments =====
+  - apiGroups: ["apps"]                     // Groupe API : apps (déploiements)
+    resources: ["deployments", "statefulsets", "daemonsets"]  // Types de déploiement
+    verbs: ["get", "list", "watch"]         // Actions : consulter, lister, regarder
+  
+  // ===== Groupe 3 : Permissions sur les Jobs =====
+  - apiGroups: ["batch"]                    // Groupe API : batch (tâches)
+    resources: ["jobs", "cronjobs"]         // Types de jobs
+    verbs: ["get", "list", "watch"]         // Actions : consulter, lister, regarder
+  
+  // ===== Groupe 4 : Permissions sur la Configuration =====
+  - apiGroups: [""]                         // Groupe API : core
+    resources: ["configmaps", "secrets"]    // ConfigMaps et Secrets
+    verbs: ["get", "list"]                  // Actions : consulter, lister (pas de watch)
+
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: devops-education-role
-rules:
-- apiGroups: [""]
-  resources: ["pods", "pods/logs", "services", "endpoints"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["apps"]
-  resources: ["deployments", "statefulsets", "daemonsets"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["batch"]
-  resources: ["jobs", "cronjobs"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["configmaps", "secrets"]
-  verbs: ["get", "list"]
+
+// ===== CLUSTERROLEBINDING : Attache le rôle à un ServiceAccount =====
+apiVersion: rbac.authorization.k8s.io/v1   // Version API RBAC
+kind: ClusterRoleBinding                    // Type : lie un rôle à un utilisateur/compte
+metadata:                                   // Métadonnées
+  name: devops-education-binding            // Nom du binding
+roleRef:                                    // Référence au rôle à attacher
+  apiGroup: rbac.authorization.k8s.io       // Groupe API RBAC
+  kind: ClusterRole                         // Type de rôle
+  name: devops-education-role               // Nom du rôle (créé plus haut)
+subjects:                                   // Liste des entités qui reçoivent ce rôle
+  - kind: ServiceAccount                    // Type d'entité : ServiceAccount
+    name: devops-education-sa               // Nom du ServiceAccount
+    namespace: default                      // Namespace : default
+
 ---
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: devops-education-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: devops-education-role
-subjects:
-- kind: ServiceAccount
-  name: devops-education-sa
-  namespace: default
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: devops-education-netpolicy
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: devops-education
-  policyTypes:
-  - Ingress
-  - Egress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: ingress-nginx
-    ports:
-    - protocol: TCP
-      port: 3000
-    - protocol: TCP
-      port: 3001
-    - protocol: TCP
-      port: 3002
-  - from:
-    - podSelector:
-        matchLabels:
-          service: gateway
-    ports:
-    - protocol: TCP
-      port: 3000
-  egress:
-  - to:
-    - podSelector: {}
-    ports:
-    - protocol: TCP
-      port: 5432
-    - protocol: TCP
-      port: 53
-    - protocol: UDP
-      port: 53
-  - to:
-    - namespaceSelector: {}
-    ports:
-    - protocol: TCP
-      port: 443
+
+// ===== NETWORKPOLICY : Règles de communication réseau =====
+apiVersion: networking.k8s.io/v1            // Version API NetworkPolicy
+kind: NetworkPolicy                         // Type d'objet : politique réseau (firewall K8s)
+metadata:                                   // Métadonnées
+  name: devops-education-netpolicy          // Nom de la politique
+spec:                                       // Spécification
+  podSelector:                              // Sélecteur : quels pods sont affectés
+    matchLabels:                            // Sélection par labels
+      app.kubernetes.io/name: devops-education  // Label : app.kubernetes.io/name = devops-education
+  
+  policyTypes:                              // Types de politiques à appliquer
+    - Ingress                               // Trafic entrant (requêtes vers les pods)
+    - Egress                                // Trafic sortant (requêtes depuis les pods)
+  
+  // ===== INGRESS : Trafic entrant autorisé =====
+  ingress:                                  // Règles de trafic entrant
+    
+    // Règle 1 : Trafic depuis l'Ingress Controller
+    - from:                                 // Source du trafic
+        - namespaceSelector:                // Sélectionne un namespace
+            matchLabels:                    // Par labels du namespace
+              name: ingress-nginx           // Depuis le namespace ingress-nginx
+      ports:                                // Ports autorisés
+        - protocol: TCP                     // Protocole TCP
+          port: 3000                        // Port : 3000 (Gateway)
+        - protocol: TCP
+          port: 3001                        // Port : 3001 (Auth Service)
+        - protocol: TCP
+          port: 3002                        // Port : 3002 (User Service)
+    
+    // Règle 2 : Trafic depuis la Gateway
+    - from:                                 // Source du trafic
+        - podSelector:                      // Sélectionne des pods
+            matchLabels:                    // Par labels
+              service: gateway              // Label : service = gateway
+      ports:                                // Ports autorisés
+        - protocol: TCP
+          port: 3000                        // Port : 3000
+  
+  // ===== EGRESS : Trafic sortant autorisé =====
+  egress:                                   // Règles de trafic sortant
+    
+    // Règle 1 : Sortie vers la base de données
+    - to:                                   // Destination du trafic
+        - podSelector: {}                   // Tous les pods (sélecteur vide)
+      ports:                                // Ports autorisés
+        - protocol: TCP
+          port: 5432                        // Port PostgreSQL
+        - protocol: TCP
+          port: 53                          // Port DNS (TCP)
+        - protocol: UDP
+          port: 53                          // Port DNS (UDP)
+    
+    // Règle 2 : Sortie vers HTTPS
+    - to:                                   // Destination
+        - namespaceSelector: {}             // Tous les namespaces
+      ports:                                // Ports autorisés
+        - protocol: TCP
+          port: 443                         // Port HTTPS (pour appels externes)
