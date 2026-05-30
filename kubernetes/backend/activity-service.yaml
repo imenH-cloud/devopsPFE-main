@@ -33,7 +33,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: activity-service
-          image: devopspfe-activity-service:latest
+          image: eline2016/devopspfe-activity-service:v5
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3003
@@ -209,7 +209,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: auth-service
-          image: devopspfe-auth-service:latest
+          image: eline2016/devopspfe-auth-service:v3
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
@@ -397,7 +397,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: classroom-service
-          image: devopspfe-classroom-service:latest
+          image: eline2016/devopspfe-classroom-service:v4
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3006
@@ -583,7 +583,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: gateway
-          image: devopspfe-gateway-backend:latest
+          image: eline2016/devopspfe-gateway-backend:v6
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -807,7 +807,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: parent-service
-          image: devopspfe-parent-service:latest
+          image: eline2016/devopspfe-parent-service:v6
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3004
@@ -988,7 +988,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: student-service
-          image: devopspfe-student-service:latest
+          image: eline2016/devopspfe-student-service:v4
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3005
@@ -1159,7 +1159,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: teacher-service
-          image: devopspfe-teacher-service:latest
+          image: eline2016/devopspfe-teacher-service:v1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3007
@@ -1330,7 +1330,7 @@ spec:
         fsGroup: 1001
       containers:
         - name: user-service
-          image: devopspfe-user-service:latest
+          image: eline2016/devopspfe-user-service:v2
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3002

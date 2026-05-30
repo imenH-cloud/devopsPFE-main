@@ -45,7 +45,7 @@ spec:                                       // Spécification
         
       containers:                           // Conteneurs du pod
         - name: frontend                    // Nom du conteneur
-          image: devopspfe-frontend-app:latest  // Image Docker (Nginx + fichiers Angular)
+          image: eline2016/devopspfe-frontend-app:v15  // Image Docker (Nginx + fichiers Angular)
           imagePullPolicy: IfNotPresent     // Pull l'image seulement si pas présente
           
           ports:                            // Ports exposés
